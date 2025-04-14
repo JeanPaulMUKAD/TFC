@@ -5,33 +5,42 @@
   </p>
 </div>
 
-## 📌 Introduction
+**GestionEcole** est un modèle moderne de tableau de bord administratif spécialement conçu pour la gestion d’un établissement scolaire. Développé avec TailwindCSS, un framework CSS populaire, il offre une approche simple et intuitive pour créer des interfaces utilisateur réactives et élégantes.
 
-**AdminToolkit -** is a modern admin dashboard template that comes with a variety of useful features and functionalities. It is built using TailwindCSS, a popular CSS framework that provides a simple and intuitive approach to building responsive UIs. The template includes over 50 pre-built pages, each designed with a focus on usability and user experience. These pages cover a wide range of use cases, including dashboards, analytics, products management, user management, invoice management and more.
+Ce modèle comprend plus de 50 pages préconstruites, chacune pensée pour répondre aux besoins spécifiques d’une école : gestion des élèves, des enseignants, des cours, des emplois du temps, des paiements des frais scolaires, des bulletins de notes, et bien plus encore.
 
-In addition to its pre-built pages, **AdminToolkit** comes with a wide range of UI components and utility classes. These include icons, buttons, tables, forms, and charts, among others. These components and utility classes are carefully designed to provide a seamless user experience, while also being highly customizable. This allows developers to create unique designs that match their brand identity and project requirements.
+En plus de ces pages, GestionEcole met à disposition une large bibliothèque de composants UI et de classes utilitaires. Parmi eux : des icônes, boutons, tableaux, formulaires, graphiques, etc. Ces éléments sont soigneusement conçus pour offrir une expérience utilisateur fluide tout en étant hautement personnalisables. Cela permet aux développeurs d’adapter facilement le design selon l’identité visuelle de l’établissement ou les besoins du projet.
 
-Overall, **AdminToolkit** is an excellent choice for developers who are looking for a developer-friendly and highly customizable admin dashboard template. It’s intuitive design, wide range of pre-built pages, useful UI components and utility classes make it the best choice for creating modern and responsive admin dashboards.
+En résumé, GestionEcole est un excellent choix pour les développeurs ou établissements à la recherche d’un tableau de bord de gestion scolaire moderne, intuitif et personnalisable. Sa structure bien pensée et ses fonctionnalités prêtes à l’emploi en font un outil idéal pour administrer efficacement une école, du primaire à l’université.
 
-## 📌 Features
+## 📌 Fonctionnalités
 
-- Based on Tailwindcss 3.x+
-- Light & Dark theme support
-- Auto-detect theme from user device preference
-- Pre-built UI components
-- Pre-built apps layout
-- 50+ Pages
-- Responsive layout
-- Easily Customizable
-- Developer friendly
-- Organized codebase
+    Basé sur TailwindCSS 3.x+
+
+    Prise en charge des thèmes clair & sombre
+
+    Détection automatique du thème selon les préférences de l'utilisateur
+
+    Composants UI prêts à l'emploi : tableaux, formulaires, graphiques, boutons, etc.
+
+    Mises en page prédéfinies adaptées aux besoins d’une école (tableaux de bord, profils utilisateurs, listes d’élèves, etc.)
+
+    Plus de 50 pages intégrées couvrant la gestion des élèves, enseignants, cours, frais scolaires, bulletins, etc.
+
+    Interface responsive adaptée à tous les écrans (mobile, tablette, desktop)
+
+    Facilement personnalisable selon l'identité de l’établissement
+
+    Convivial pour les développeurs, avec une structure claire
+
+    Code bien organisé pour un développement rapide et efficace
 
 ## 📌 Installation
 
 **1. Clone the repository**
 
 ```bash
-git clone git@github.com:mostafizurhimself/admintoolkit-html.git
+git clone git@github.com/JeanPaulMUKAD/TFC.git
 ```
 
 **2. Install dependencies**
@@ -58,21 +67,4 @@ yarn build
 yarn start
 ```
 
-## 📌 Contribution
 
-If you're interested in contributing to Admin Toolkit, Please read our [contributing docs](CONTRIBUTING.md) before submitting a pull request.
-
-## 📌 License
-
-[MIT](./LICENSE)
-
-## 📌 Todo
-
-- [ ] RTL support
-- [ ] Language Support
-- [ ] React version
-- [ ] Vue version
-- [ ] Angular version
-- [ ] Laravel version
-
-<a href="https://www.buymeacoffee.com/mostafizur" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
