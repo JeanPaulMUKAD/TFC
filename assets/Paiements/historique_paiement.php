@@ -76,7 +76,7 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
   <div class="container mx-auto px-4">
      <!-- Lien de retour -->
      <div class="mb-4">
-      <a href="Dashboad.php" class="text-blue text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
+      <a href="../../Dashboad.php" class="text-blue text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
     </div>
     <h1 class="text-3xl font-bold text-center text-blue-900 mb-8">HISTORIQUES DE PAIEMENTS</h1>
     <div class="table-responsive">
@@ -84,11 +84,14 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
         <thead class="bg-gray-50">
           <tr>
             <th class="border border-gray-300 px-4 py-2 text-blue-900">ID</th>
+            <th class="border border-gray-300 px-4 py-2">Nom de l'élève</th>
             <th class="border border-gray-300 px-4 py-2">Classe</th>
             <th class="border border-gray-300 px-4 py-2">Montant payé</th>
             <th class="border border-gray-300 px-4 py-2">Devise</th>
-            <th class="border border-gray-300 px-4 py-2">Motif</th>
+            <th class="border border-gray-300 px-4 py-2">Motif de paiement</th>
             <th class="border border-gray-300 px-4 py-2">Date de paiement</th>
+            <th class="border border-gray-300 px-4 py-2">Annuel</th>
+            <th class="border border-gray-300 px-4 py-2">Status</th>
             <th class="border border-gray-300 px-4 py-2">Action</th>
           </tr>
         </thead>
@@ -99,6 +102,19 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
               <?php
                 // Déterminer la devise en fonction de la valeur de montant_payer
                 $devise = strpos($row['montant_payer'], '$') !== false ? '$' : 'Fc';
+                // Calculer le montant restant à payer
+                // Extraction des données
+                $total_annuel = $row['total_annuel'];
+                $montant_payer = $row['montant_payer'];
+
+                // Retirer les lettres éventuelles (par ex: "500USD" -> 500)
+                $total_annuel_numeric = (int) filter_var($total_annuel, FILTER_SANITIZE_NUMBER_INT);
+                $montant_payer_numeric = (int) filter_var($montant_payer, FILTER_SANITIZE_NUMBER_INT);
+
+                // Trouver la devise (USD ou CDF) depuis total_annuel
+                $devise = preg_replace('/[0-9]/', '', $total_annuel);
+                // Faire la soustraction
+                $reste = $total_annuel_numeric - $montant_payer_numeric;
               ?>
               <tr class="hover:bg-gray-100" id="row-<?php echo $row['id']; ?>">
                 <td class="border border-gray-300 px-4 py-2"><?php echo $id++; ?></td>
@@ -108,6 +124,14 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
                 <td class="border border-gray-300 px-4 py-2"><?php echo $devise; ?></td>
                 <td class="border border-gray-300 px-4 py-2"><?php echo $row['motif_paiement']; ?></td>
                 <td class="border border-gray-300 px-4 py-2"><?php echo $row['date_paiement']; ?></td>
+                <td class="border border-gray-300 px-4 py-2"><?php echo $row['total_annuel']; ?></td>
+                <td class="border border-gray-300 px-4 py-2">
+                  <?php if ($reste > 0): ?>
+                    <span class="text-red-500">Reste à payer: <?php echo $reste . ' ' . $devise; ?></span>
+                  <?php else: ?>
+                    <span class="text-green-500">Payé</span>
+                  <?php endif; ?>
+                </td>
                 <td class="border border-gray-300 px-4 py-2">
                   <button onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo $devise; ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>')" class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Imprimer
@@ -129,11 +153,11 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
         </tbody>
         <tfoot class="bg-gray-50">
           <tr>
-            <td colspan="7" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en USD</td>
+            <td colspan="9" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en USD</td>
             <td class="border border-gray-300 px-4 py-2 font-semibold">$<?php echo number_format($total_usd, 2); ?></td>
           </tr>
           <tr>
-            <td colspan="7" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en Fc</td>
+            <td colspan="9" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en Fc</td>
             <td class="border border-gray-300 px-4 py-2 font-semibold"><?php echo number_format($total_fc, 2); ?> Fc</td>
           </tr>
         </tfoot>
@@ -188,7 +212,7 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
                                     </tr>
                                     <tr>
                                         <th>Montant payé</th>
-                                        <td>${montant} ${devise}</td>
+                                        <td>${montant}</td>
                                     </tr>
                                     <tr>
                                         <th>Motif</th>
@@ -197,6 +221,15 @@ $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-
                                     <tr>
                                         <th>Date de paiement</th>
                                         <td>${date}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Statut</th>
+                                        <?php if ($reste > 0): ?>
+                                        <span class="text-red-500">Reste à payer: <?php echo $reste . ' ' . $devise; ?></span>
+                                        <?php else: ?>
+                                          <span class="text-green-500">Payé</span>
+                                        <?php endif; ?>
+                                        <td><?php echo $reste > 0 ? 'Reste à payer: ' . $reste . ' ' . $devise : 'Payé'; ?></td>
                                     </tr>
                                 </table>
                             </div>

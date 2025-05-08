@@ -94,7 +94,7 @@
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
                                                 <a href="#" class="d-block">
-                                                    <img src="assets/images/login.png" alt="" height="50">
+                                                    <img src="assets/images/login.png" alt="" height="50" style="filter: brightness(0) invert(1); transition: filter 0.3s ease;" onmouseover="this.style.filter='none'" onmouseout="this.style.filter='brightness(0) invert(1)'">
                                                 </a>
                                             </div>
                                             <div class="mt-auto">
@@ -110,13 +110,13 @@
                                                     </div>
                                                     <div class="carousel-inner text-center text-white-50 pb-5">
                                                         <div class="carousel-item active">
-                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design épuré, facile à personnaliser. Merci beaucoup ! "</p>
+                                                            <p class="fs-15 fst-italic">" Simplifiez le paiement des frais scolaires avec notre plateforme sécurisée et rapide. "</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">" Le thème est vraiment génial avec un support client incroyable."</p>
+                                                            <p class="fs-15 fst-italic">" Gérez vos paiements en toute tranquillité et concentrez-vous sur l'éducation de vos enfants. "</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design épuré, facile à personnaliser. Merci beaucoup ! "</p>
+                                                            <p class="fs-15 fst-italic">" Transparence et efficacité : payez vos frais scolaires en quelques clics. "</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -169,10 +169,7 @@
                                                     </div>
 
                                                     <div>
-                                                        <button type="button" class="btn btn-primary btn-icon waves-effect waves-light"><i class="ri-facebook-fill fs-16"></i></button>
-                                                        <button type="button" class="btn btn-danger btn-icon waves-effect waves-light"><i class="ri-google-fill fs-16"></i></button>
-                                                        <button type="button" class="btn btn-dark btn-icon waves-effect waves-light"><i class="ri-github-fill fs-16"></i></button>
-                                                        <button type="button" class="btn btn-info btn-icon waves-effect waves-light"><i class="ri-twitter-fill fs-16"></i></button>
+                                                        <button type="button" class="btn btn-primary btn-icon waves-effect waves-light"><i class="ri-mail-fill fs-16"></i></button>
                                                     </div>
                                                 </div>
 
@@ -206,7 +203,7 @@
                     <div class="col-lg-12">
                         <div class="text-center">
                             <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script> Administration <i class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                <script>document.write(new Date().getFullYear())</script> Administration <i class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>

@@ -6,50 +6,45 @@
     $username = "root";
     $password = "";
     $dbname = "school";
-
+    
     $conn = new mysqli($servername, $username, $password, $dbname);
-
+    
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
-
+    
     // Initialiser la variable $currentConnected
     $currentConnected = 0;
-
+    
     // Requête pour récupérer le nombre actuel d'utilisateurs connectés
     $sql = "SELECT COUNT(*) AS total_connected FROM Pupil WHERE is_connected = 1";
     $result = $conn->query($sql);
-
+    
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
         $currentConnected = $row['total_connected'];
     }
-
-    // Définir un nombre de référence (par exemple, le nombre d'utilisateurs connectés précédemment)
-    $previousConnected = 10; // Vous pouvez récupérer cette valeur d'une base de données ou d'une autre source
-
-    // Calculer le pourcentage de changement
-    if ($previousConnected > 0) {
-        $percentageChange = (($currentConnected - $previousConnected) / $previousConnected) * 100;
-    } else {
-        $percentageChange = 0; // Si aucune donnée précédente, le pourcentage est 0
-    }
-
-    // Déterminer la classe CSS pour indiquer une augmentation ou une diminution
-    $percentageClass = $percentageChange >= 0 ? "text-success" : "text-danger";
-    $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-right-down-line";
-
+    
     // Initialiser la variable $connectedUsers
     $connectedUsers = [];
-
+    
     // Requête pour récupérer les noms des utilisateurs connectés
     $sqlUsers = "SELECT Names_User FROM Pupil WHERE is_connected = 1";
     $resultUsers = $conn->query($sqlUsers);
-
+    
     if ($resultUsers && $resultUsers->num_rows > 0) {
         while ($row = $resultUsers->fetch_assoc()) {
             $connectedUsers[] = $row['Names_User'];
         }
+    }
+    
+    // Stocker l'utilisateur connecté dans la session
+    // Attention : ici, je suppose que tu veux prendre **l'utilisateur qui correspond à la session**.
+    // Sinon, pour le test, on prend juste le premier connecté :
+    if (!empty($connectedUsers)) {
+        $_SESSION['username'] = $connectedUsers[0]; // Premier utilisateur connecté
+    } else {
+        $_SESSION['username'] = null;
     }
 
     // Paiements : Récupérer le nombre total d'élèves ayant payé par classe
@@ -365,7 +360,7 @@
                     <!-- item-->
                     <h6 class="dropdown-header">Welcome Anna!</h6>
                     <a class="dropdown-item" href="pages-profile.php"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
-                    <a class="dropdown-item" href="apps-chat.php"><i class="mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Messages</span></a>
+                    <a class="dropdown-item" href="./assets/chat/apps-chat.php"><i class="mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Messages</span></a>
                     <a class="dropdown-item" href="apps-tasks-kanban.php"><i class="mdi mdi-calendar-check-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Taskboard</span></a>
                     <a class="dropdown-item" href="pages-faqs.php"><i class="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Help</span></a>
                     <div class="dropdown-divider"></div>
@@ -391,13 +386,13 @@
                                 <ul class="nav nav-sm flex-column">
                                    
                                     <li class="nav-item">
-                                        <a href="index.php" class="nav-link" data-key="t-ecommerce"> Analyses </a>
+                                        <a href="#" class="nav-link" data-key="t-ecommerce"> Analyses </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="Paiement.php" class="nav-link" data-key="t-ecommerce"> Paiements </a>
+                                        <a href="./assets/Paiements/Paiement.php" class="nav-link" data-key="t-ecommerce"> Paiements </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Historiques </a>
+                                        <a href="./assets/Paiements/historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Historiques </a>
                                     </li>
                                    
                                 </ul>
@@ -536,25 +531,23 @@
                                                         <p class="text-uppercase fw-medium text-muted text-truncate mb-0"> Total de(s) conecté(s)</p>
                                                     </div>
                                                     <div class="flex-shrink-0">
-                                                    <h5 class="<?php echo $percentageClass; ?> fs-14 mb-0">
-                                                        <i class="<?php echo $percentageIcon; ?> fs-13 align-middle"></i>
-                                                        <?php echo round($percentageChange, 2); ?> %
-                                                    </h5>
+                                                   
                                                     </div>
                                                 </div>
                                                 <div class="d-flex align-items-end justify-content-between mt-4">
                                                 <div>
                                                     <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                                                        <?php echo count($connectedUsers) . " connecté(s)"; ?>
+                                                        Connecté :
                                                     </h4>
                                                     <ul>
                                                         <?php
-                                                        foreach ($connectedUsers as $user) {
-                                                            echo "<li>" . htmlspecialchars($user) . "</li>";
+                                                        if (isset($_SESSION['username']) && $_SESSION['username']) {
+                                                            echo "<li>" . htmlspecialchars($_SESSION['username']) . "</li>";
+                                                        } else {
+                                                            echo "<li>Aucun utilisateur connecté</li>";
                                                         }
                                                         ?>
                                                     </ul>
-                                                    <a href="#" class="text-decoration-underline">Voir les détails</a>
                                                 </div>
                                                     <div class="avatar-sm flex-shrink-0">
                                                         <span class="avatar-title bg-success-subtle rounded fs-3">
@@ -574,27 +567,22 @@
                                                     <div class="flex-grow-1 overflow-hidden">
                                                         <p class="text-uppercase fw-medium text-muted text-truncate mb-0">État des paiements</p>
                                                     </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="<?php echo $percentageClass; ?> fs-14 mb-0">
-                                                            <i class="<?php echo $percentageIcon; ?> fs-13 align-middle"></i>
-                                                            <?php echo round($percentageChange, 2); ?> %
-                                                        </h5>
-                                                    </div>
+                                                   
                                                 </div>
                                                 <div class="d-flex align-items-end justify-content-between mt-4">
                                                     <div>
                                                         <h4 class="fs-22 fw-semibold ff-secondary mb-4">
                                                             <?php echo $currentPayments; ?> paiements
                                                         </h4>
-                                                        <ul>
+                                                        <!--<ul>
                                                             <?php foreach ($paymentsByClass as $class => $total): ?>
                                                                 <li><?php echo htmlspecialchars($class); ?> : <?php echo $total; ?> paiements</li>
                                                             <?php endforeach; ?>
-                                                        </ul>
+                                                        </ul> -->
                                                     </div>
                                                     <div class="avatar-sm flex-shrink-0">
                                                         <span class="avatar-title bg-info-subtle rounded fs-3">
-                                                            <i class="bx bx-shopping-bag text-info"></i>
+                                                            <i class="bx bx-credit-card text-info"></i>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -608,22 +596,30 @@
                                             <div class="card-body">
                                                 <div class="d-flex align-items-center">
                                                     <div class="flex-grow-1 overflow-hidden">
-                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Customers</p>
+                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Heure</p>
                                                     </div>
                                                     <div class="flex-shrink-0">
-                                                        <h5 class="text-success fs-14 mb-0">
-                                                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +29.08 %
-                                                        </h5>
+                                                        
                                                     </div>
                                                 </div>
                                                 <div class="d-flex align-items-end justify-content-between mt-4">
                                                     <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" data-target="183.35">0</span>M </h4>
-                                                        <a href="#" class="text-decoration-underline">See details</a>
+                                                        <h4 id="real-time-clock" class="fs-22 fw-semibold ff-secondary mb-4"></h4>
+                                                            <script>
+                                                                function updateClock() {
+                                                                    var now = new Date();
+                                                                    var hours = String(now.getHours()).padStart(2, '0');
+                                                                    var minutes = String(now.getMinutes()).padStart(2, '0');
+                                                                    var seconds = String(now.getSeconds()).padStart(2, '0');
+                                                                    document.getElementById('real-time-clock').textContent = hours + ':' + minutes + ':' + seconds;
+                                                                }
+                                                                setInterval(updateClock, 1000);
+                                                            </script>
+                                                        
                                                     </div>
                                                     <div class="avatar-sm flex-shrink-0">
                                                         <span class="avatar-title bg-warning-subtle rounded fs-3">
-                                                            <i class="bx bx-user-circle text-warning"></i>
+                                                            <i class="bx bx-time text-warning"></i>
                                                         </span>
                                                     </div>
                                                 </div>
@@ -634,29 +630,63 @@
                                     <div class="col-xl-3 col-md-6">
                                         <!-- card -->
                                         <div class="card card-animate">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1 overflow-hidden">
-                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0"> My Balance</p>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="text-muted fs-14 mb-0">
-                                                            +0.00 %
-                                                        </h5>
-                                                    </div>
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0"> Date</p>
                                                 </div>
-                                                <div class="d-flex align-items-end justify-content-between mt-4">
-                                                    <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">$<span class="counter-value" data-target="165.89">0</span>k </h4>
-                                                        <a href="#" class="text-decoration-underline">Withdraw money</a>
-                                                    </div>
-                                                    <div class="avatar-sm flex-shrink-0">
-                                                        <span class="avatar-title bg-primary-subtle rounded fs-3">
-                                                            <i class="bx bx-wallet text-primary"></i>
-                                                        </span>
-                                                    </div>
+                                                <div class="flex-shrink-0">
+                                                    <!-- Rien ici -->
                                                 </div>
-                                            </div><!-- end card body -->
+                                            </div>
+
+                                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                                <div>
+                                                    <h4 id="real-time-date" class="fs-22 fw-semibold ff-secondary mb-4"></h4>
+                                                    <script>
+                                                        function updateDate() {
+                                                            var now = new Date();
+                                                            var options = { year: 'numeric', month: 'long', day: 'numeric' };
+                                                            document.getElementById('real-time-date').textContent = now.toLocaleDateString('fr-FR', options);
+                                                        }
+                                                        updateDate();
+                                                        setInterval(updateDate, 60000); 
+                                                    </script>
+                                                </div>
+                                                <div class="avatar-sm flex-shrink-0">
+                                                    <span class="avatar-title bg-primary-subtle rounded fs-3" id="calendar-icon" style="cursor:pointer;">
+                                                        <i class="bx bx-calendar text-primary"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Calendrier caché au départ -->
+                                            <div id="calendar-popup" style="display:none; position:absolute; top: 100px; right: 20px; background:white; border:1px solid #ddd; padding:15px; border-radius:10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index:999;">
+                                                <input type="date" class="form-control">
+                                            </div>
+
+                                        </div><!-- end card body -->
+
+                                        <script>
+                                            const calendarIcon = document.getElementById('calendar-icon');
+                                            const calendarPopup = document.getElementById('calendar-popup');
+
+                                            calendarIcon.addEventListener('click', () => {
+                                                if (calendarPopup.style.display === 'none') {
+                                                    calendarPopup.style.display = 'block';
+                                                } else {
+                                                    calendarPopup.style.display = 'none';
+                                                }
+                                            });
+
+                                            // Fermer le calendrier si on clique en dehors
+                                            document.addEventListener('click', function(event) {
+                                                if (!calendarPopup.contains(event.target) && !calendarIcon.contains(event.target)) {
+                                                    calendarPopup.style.display = 'none';
+                                                }
+                                            });
+                                        </script>
+
                                         </div><!-- end card -->
                                     </div><!-- end col -->
                                 </div> <!-- end row-->
@@ -665,10 +695,10 @@
                                     <div class="col-xl-8">
                                         <div class="card">
                                             <div class="card-header border-0 align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Revenue</h4>
+                                                <h4 class="card-title mb-0 flex-grow-1">Revenu des paiements</h4>
                                                 <div>
                                                     <button type="button" class="btn btn-soft-secondary material-shadow-none btn-sm">
-                                                        ALL
+                                                        Tout
                                                     </button>
                                                     <button type="button" class="btn btn-soft-secondary material-shadow-none btn-sm">
                                                         1M
@@ -677,7 +707,7 @@
                                                         6M
                                                     </button>
                                                     <button type="button" class="btn btn-soft-primary material-shadow-none btn-sm">
-                                                        1Y
+                                                        1A
                                                     </button>
                                                 </div>
                                             </div><!-- end card header -->
@@ -685,40 +715,165 @@
                                             <div class="card-header p-0 border-0 bg-light-subtle">
                                                 <div class="row g-0 text-center">
                                                     <div class="col-6 col-sm-3">
+                                                        <?php
+                                                            // Connexion MySQL
+                                                            $host = 'localhost';
+                                                            $db   = 'school';
+                                                            $user = 'root'; 
+                                                            $pass = '';
+
+                                                            $mysqli = new mysqli($host, $user, $pass, $db);
+
+                                                            // Vérifier si la connexion est bonne
+                                                            if ($mysqli->connect_error) {
+                                                                die('Erreur de connexion (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+                                                            }
+                                                            // Requête pour compter les élèves selon leur nom
+                                                            $query = "SELECT COUNT(nom_eleve) as total FROM eleve"; // ON COMPTE LES NOMS
+
+                                                            $result = $mysqli->query($query);
+
+                                                            $currentPayments = 0;
+                                                            if ($result) {
+                                                                $row = $result->fetch_assoc();
+                                                                $currentPayments = $row['total'];
+                                                            }
+                                                             // Supposons que tu as déjà récupéré ton taux du jour (ex: depuis une API ou une valeur fixe)
+                                                            $tauxJour = 2886.15;
+
+                                                            // Calcul du pourcentage
+                                                            $resultat = ($currentPayments * 100) / $tauxJour;
+
+                                                            // Choix de la couleur selon le résultat
+                                                            $colorClass = ($resultat < 50) ? 'text-danger' : 'text-success';
+
+                                                            // Choix de la description selon le résultat
+                                                            $baisse = ($resultat < 50) ? 'Baisse' : 'Hausse';
+                                                            
+                                                        ?>
                                                         <div class="p-3 border border-dashed border-start-0">
-                                                            <h5 class="mb-1"><span class="counter-value" data-target="7585">0</span></h5>
-                                                            <p class="text-muted mb-0">Orders</p>
+                                                        <h5 class="mb-1 <?= $colorClass ?>">
+                                                            <span class="counter-value" data-target="<?= number_format($resultat, 2) ?>">0</span>%
+                                                        </h5>
+                                                            <p class="text-muted mb-0"><?php echo $baisse ?></p>
                                                         </div>
                                                     </div>
                                                     <!--end col-->
                                                     <div class="col-6 col-sm-3">
-                                                        <div class="p-3 border border-dashed border-start-0">
-                                                            <h5 class="mb-1">$<span class="counter-value" data-target="22.89">0</span>k</h5>
-                                                            <p class="text-muted mb-0">Earnings</p>
-                                                        </div>
+                                                        <?php
+                                                            if (date('d') == 5) {
+                                                                $currentDate = date('d/m/Y'); // Date du jour
+                                                                echo '<div class="p-3 border border-dashed border-start-0">';
+                                                                echo '<h5 class="mb-1 text-sucess">Envoyer notification</h5>';
+                                                                echo '<p class="text-muted mb-0">' . $currentDate . '</p>';
+                                                                echo '</div>';
+                                                            } else {
+                                                                $currentDate = date('d/m/Y');
+                                                                echo '<div class="p-3 border border-dashed border-start-0">';
+                                                                echo '<h5 class="mb-1 text-danger">Aucune notification</h5>';
+                                                                echo '<p class="text-muted mb-0">'. $currentDate . '</p>';
+                                                                echo '</div>';
+                                                            }
+                                                        ?>
                                                     </div>
                                                     <!--end col-->
                                                     <div class="col-6 col-sm-3">
                                                         <div class="p-3 border border-dashed border-start-0">
                                                             <h5 class="mb-1"><span class="counter-value" data-target="367">0</span></h5>
-                                                            <p class="text-muted mb-0">Refunds</p>
+                                                            <p class="text-muted mb-0">Remboursements</p>
                                                         </div>
                                                     </div>
                                                     <!--end col-->
                                                     <div class="col-6 col-sm-3">
                                                         <div class="p-3 border border-dashed border-start-0 border-end-0">
-                                                            <h5 class="mb-1 text-success"><span class="counter-value" data-target="18.92">0</span>%</h5>
-                                                            <p class="text-muted mb-0">Conversation Ratio</p>
+                                                            <h5 class="mb-1 text-success">
+                                                                <span id="taux-jour" class="counter-value" data-target="0">0</span>CDF
+                                                            </h5>
+                                                            <p class="text-muted mb-0">Taux du jour</p>
                                                         </div>
                                                     </div>
+
                                                     <!--end col-->
                                                 </div>
                                             </div><!-- end card header -->
 
                                             <div class="card-body p-0 pb-2">
-                                                <div class="w-100">
-                                                    <div id="customer_impression_charts" data-colors='["--vz-primary", "--vz-success", "--vz-danger"]' data-colors-minimal='["--vz-light", "--vz-primary", "--vz-info"]' data-colors-saas='["--vz-success", "--vz-info", "--vz-danger"]' data-colors-modern='["--vz-warning", "--vz-primary", "--vz-success"]' data-colors-interactive='["--vz-info", "--vz-primary", "--vz-danger"]' data-colors-creative='["--vz-warning", "--vz-primary", "--vz-danger"]' data-colors-corporate='["--vz-light", "--vz-primary", "--vz-secondary"]' data-colors-galaxy='["--vz-secondary", "--vz-primary", "--vz-primary-rgb, 0.50"]' data-colors-classic='["--vz-light", "--vz-primary", "--vz-secondary"]' data-colors-vintage='["--vz-success", "--vz-primary", "--vz-secondary"]' class="apex-charts" dir="ltr"></div>
+                                            <div class="card-body p-0 pb-2">
+                                                <?php
+                                                    // Connexion MySQL
+                                                    $host = 'localhost';
+                                                    $db   = 'school';
+                                                    $user = 'root'; 
+                                                    $pass = '';
+
+                                                    $mysqli = new mysqli($host, $user, $pass, $db);
+
+                                                    // Vérifier si la connexion est bonne
+                                                    if ($mysqli->connect_error) {
+                                                        die('Erreur de connexion (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+                                                    }
+
+                                                    // Requête pour récupérer les montants de paiement
+                                                    $result = $mysqli->query("SELECT montant_payer, date_paiement FROM eleve");
+
+                                                    $series = [];
+                                                    $months = [];
+
+                                                    // Tableau pour convertir mois numérique en français
+                                                    $mois_francais = [
+                                                        '01' => 'Janvier', '02' => 'Février', '03' => 'Mars', '04' => 'Avril',
+                                                        '05' => 'Mai', '06' => 'Juin', '07' => 'Juillet', '08' => 'Août',
+                                                        '09' => 'Septembre', '10' => 'Octobre', '11' => 'Novembre', '12' => 'Décembre'
+                                                    ];
+
+                                                    while ($row = $result->fetch_assoc()) {
+                                                        $date = $row['date_paiement'];
+                                                        $mois_numero = date('m', strtotime($date)); // Extraire le mois
+                                                        $mois_nom = $mois_francais[$mois_numero] ?? 'Inconnu'; // Chercher le mois français
+
+                                                        $months[] = $mois_nom; // X-axis
+                                                        $series[] = (float) $row['montant_payer']; // Y-axis
+                                                    }
+
+                                                    // Encoder en JSON pour JavaScript
+                                                    $months_json = json_encode($months);
+                                                    $series_json = json_encode($series);
+                                                ?>
+                                                    <div class="w-100">
+                                                        <div id="customer_impression_charts" class="apex-charts" dir="ltr"></div>
+
+                                                        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+                                                        <script>
+                                                        document.addEventListener("DOMContentLoaded", function () {
+                                                            var options = {
+                                                                chart: {
+                                                                    type: 'bar',
+                                                                    height: 350
+                                                                },
+                                                                series: [{
+                                                                    name: 'Paiements',
+                                                                    data: <?php echo $series_json; ?>
+                                                                }],
+                                                                xaxis: {
+                                                                    categories: <?php echo $months_json; ?>,
+                                                                    labels: {
+                                                                        rotate: -45, // Incliner les labels pour éviter qu'ils se chevauchent
+                                                                        style: {
+                                                                            fontSize: '12px',
+                                                                            colors: '#6c757d'
+                                                                        }
+                                                                    }
+                                                                },
+                                                                colors: ['#34c38f'], // Couleur verte
+                                                            };
+
+                                                            var chart = new ApexCharts(document.querySelector("#customer_impression_charts"), options);
+                                                            chart.render();
+                                                        });
+                                                        </script>
+                                                    </div>
                                                 </div>
+
                                             </div><!-- end card body -->
                                         </div><!-- end card -->
                                     </div><!-- end col -->
@@ -766,428 +921,171 @@
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-xl-6">
-                                        <div class="card">
-                                            <div class="card-header align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Best Selling Products</h4>
-                                                <div class="flex-shrink-0">
-                                                    <div class="dropdown card-header-dropdown">
-                                                        <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                            <span class="fw-semibold text-uppercase fs-12">Sort by:
-                                                            </span><span class="text-muted">Today<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                                        </a>
-                                                        <div class="dropdown-menu dropdown-menu-end">
-                                                            <a class="dropdown-item" href="#">Today</a>
-                                                            <a class="dropdown-item" href="#">Yesterday</a>
-                                                            <a class="dropdown-item" href="#">Last 7 Days</a>
-                                                            <a class="dropdown-item" href="#">Last 30 Days</a>
-                                                            <a class="dropdown-item" href="#">This Month</a>
-                                                            <a class="dropdown-item" href="#">Last Month</a>
-                                                        </div>
+                                <div class="col-xl-4">
+                                    <div class="card card-height-100">
+                                        <div class="card-header align-items-center d-flex">
+                                            <h4 class="card-title mb-0 flex-grow-1">Répartition des paiements par mois</h4>
+                                            <div class="flex-shrink-0">
+                                                <div class="dropdown card-header-dropdown">
+                                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <span class="text-muted">Options<i class="mdi mdi-chevron-down ms-1"></i></span>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-end">
+                                                        <a class="dropdown-item" href="#" id="export-data">Télécharger</a>
+                                                        <input type="file" id="import-file" style="display:none" accept=".csv">
+                                                        <a class="dropdown-item" href="#" id="import-data">Importer</a>
+
                                                     </div>
                                                 </div>
-                                            </div><!-- end card header -->
-
-                                            <div class="card-body">
-                                                <div class="table-responsive table-card">
-                                                    <table class="table table-hover table-centered align-middle table-nowrap mb-0">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="avatar-sm bg-light rounded p-1 me-2">
-                                                                            <img src="assets/images/products/img-1.png" alt="" class="img-fluid d-block" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1"><a href="apps-ecommerce-product-details.php" class="text-reset">Branded T-Shirts</a></h5>
-                                                                            <span class="text-muted">24 Apr 2021</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$29.00</h5>
-                                                                    <span class="text-muted">Price</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">62</h5>
-                                                                    <span class="text-muted">Orders</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">510</h5>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$1,798</h5>
-                                                                    <span class="text-muted">Amount</span>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="avatar-sm bg-light rounded p-1 me-2">
-                                                                            <img src="assets/images/products/img-2.png" alt="" class="img-fluid d-block" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1"><a href="apps-ecommerce-product-details.php" class="text-reset">Bentwood Chair</a></h5>
-                                                                            <span class="text-muted">19 Mar 2021</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$85.20</h5>
-                                                                    <span class="text-muted">Price</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">35</h5>
-                                                                    <span class="text-muted">Orders</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal"><span class="badge bg-danger-subtle text-danger">Out of stock</span> </h5>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$2982</h5>
-                                                                    <span class="text-muted">Amount</span>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="avatar-sm bg-light rounded p-1 me-2">
-                                                                            <img src="assets/images/products/img-3.png" alt="" class="img-fluid d-block" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1"><a href="apps-ecommerce-product-details.php" class="text-reset">Borosil Paper Cup</a></h5>
-                                                                            <span class="text-muted">01 Mar 2021</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$14.00</h5>
-                                                                    <span class="text-muted">Price</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">80</h5>
-                                                                    <span class="text-muted">Orders</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">749</h5>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$1120</h5>
-                                                                    <span class="text-muted">Amount</span>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="avatar-sm bg-light rounded p-1 me-2">
-                                                                            <img src="assets/images/products/img-4.png" alt="" class="img-fluid d-block" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1"><a href="apps-ecommerce-product-details.php" class="text-reset">One Seater Sofa</a></h5>
-                                                                            <span class="text-muted">11 Feb 2021</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$127.50</h5>
-                                                                    <span class="text-muted">Price</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">56</h5>
-                                                                    <span class="text-muted">Orders</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal"><span class="badge bg-danger-subtle text-danger">Out of stock</span></h5>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$7140</h5>
-                                                                    <span class="text-muted">Amount</span>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="avatar-sm bg-light rounded p-1 me-2">
-                                                                            <img src="assets/images/products/img-5.png" alt="" class="img-fluid d-block" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1"><a href="apps-ecommerce-product-details.php" class="text-reset">Stillbird Helmet</a></h5>
-                                                                            <span class="text-muted">17 Jan 2021</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$54</h5>
-                                                                    <span class="text-muted">Price</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">74</h5>
-                                                                    <span class="text-muted">Orders</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">805</h5>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 my-1 fw-normal">$3996</h5>
-                                                                    <span class="text-muted">Amount</span>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-
-                                                <div class="align-items-center mt-4 pt-2 justify-content-between row text-center text-sm-start">
-                                                    <div class="col-sm">
-                                                        <div class="text-muted">
-                                                            Showing <span class="fw-semibold">5</span> of <span class="fw-semibold">25</span> Results
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-sm-auto  mt-3 mt-sm-0">
-                                                        <ul class="pagination pagination-separated pagination-sm mb-0 justify-content-center">
-                                                            <li class="page-item disabled">
-                                                                <a href="#" class="page-link">←</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">1</a>
-                                                            </li>
-                                                            <li class="page-item active">
-                                                                <a href="#" class="page-link">2</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">3</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">→</a>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-
                                             </div>
-                                        </div>
-                                    </div>
+                                        </div><!-- end card header -->
 
-                                    <div class="col-xl-6">
-                                        <div class="card card-height-100">
-                                            <div class="card-header align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Top Sellers</h4>
-                                                <div class="flex-shrink-0">
-                                                    <div class="dropdown card-header-dropdown">
-                                                        <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                            <span class="text-muted">Report<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                                        </a>
-                                                        <div class="dropdown-menu dropdown-menu-end">
-                                                            <a class="dropdown-item" href="#">Download Report</a>
-                                                            <a class="dropdown-item" href="#">Export</a>
-                                                            <a class="dropdown-item" href="#">Import</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card header -->
+                                        <div class="card-body">
+                                            <?php
+                                                // Connexion MySQL
+                                                $host = 'localhost';
+                                                $db   = 'school';
+                                                $user = 'root'; 
+                                                $pass = '';
 
-                                            <div class="card-body">
-                                                <div class="table-responsive table-card">
-                                                    <table class="table table-centered table-hover align-middle table-nowrap mb-0">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/companies/img-1.png" alt="" class="avatar-sm p-2" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h5 class="fs-14 my-1 fw-medium">
-                                                                                <a href="apps-ecommerce-seller-details.php" class="text-reset">iTest Factory</a>
-                                                                            </h5>
-                                                                            <span class="text-muted">Oliver Tyler</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">Bags and Wallets</span>
-                                                                </td>
-                                                                <td>
-                                                                    <p class="mb-0">8547</p>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">$541200</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 mb-0">32%<i class="ri-bar-chart-fill text-success fs-16 align-middle ms-2"></i></h5>
-                                                                </td>
-                                                            </tr><!-- end -->
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/companies/img-2.png" alt="" class="avatar-sm p-2" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">
-                                                                            <h5 class="fs-14 my-1 fw-medium"><a href="apps-ecommerce-seller-details.php" class="text-reset">Digitech Galaxy</a></h5>
-                                                                            <span class="text-muted">John Roberts</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">Watches</span>
-                                                                </td>
-                                                                <td>
-                                                                    <p class="mb-0">895</p>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">$75030</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 mb-0">79%<i class="ri-bar-chart-fill text-success fs-16 align-middle ms-2"></i></h5>
-                                                                </td>
-                                                            </tr><!-- end -->
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/companies/img-3.png" alt="" class="avatar-sm p-2" />
-                                                                        </div>
-                                                                        <div class="flex-gow-1">
-                                                                            <h5 class="fs-14 my-1 fw-medium"><a href="apps-ecommerce-seller-details.php" class="text-reset">Nesta Technologies</a></h5>
-                                                                            <span class="text-muted">Harley Fuller</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">Bike Accessories</span>
-                                                                </td>
-                                                                <td>
-                                                                    <p class="mb-0">3470</p>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">$45600</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 mb-0">90%<i class="ri-bar-chart-fill text-success fs-16 align-middle ms-2"></i></h5>
-                                                                </td>
-                                                            </tr><!-- end -->
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/companies/img-8.png" alt="" class="avatar-sm p-2" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">
-                                                                            <h5 class="fs-14 my-1 fw-medium"><a href="apps-ecommerce-seller-details.php" class="text-reset">Zoetic Fashion</a></h5>
-                                                                            <span class="text-muted">James Bowen</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">Clothes</span>
-                                                                </td>
-                                                                <td>
-                                                                    <p class="mb-0">5488</p>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">$29456</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 mb-0">40%<i class="ri-bar-chart-fill text-success fs-16 align-middle ms-2"></i></h5>
-                                                                </td>
-                                                            </tr><!-- end -->
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/companies/img-5.png" alt="" class="avatar-sm p-2" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">
-                                                                            <h5 class="fs-14 my-1 fw-medium">
-                                                                                <a href="apps-ecommerce-seller-details.php" class="text-reset">Meta4Systems</a>
-                                                                            </h5>
-                                                                            <span class="text-muted">Zoe Dennis</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">Furniture</span>
-                                                                </td>
-                                                                <td>
-                                                                    <p class="mb-0">4100</p>
-                                                                    <span class="text-muted">Stock</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span class="text-muted">$11260</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 mb-0">57%<i class="ri-bar-chart-fill text-success fs-16 align-middle ms-2"></i></h5>
-                                                                </td>
-                                                            </tr><!-- end -->
-                                                        </tbody>
-                                                    </table><!-- end table -->
-                                                </div>
+                                                $mysqli = new mysqli($host, $user, $pass, $db);
 
-                                                <div class="align-items-center mt-4 pt-2 justify-content-between row text-center text-sm-start">
-                                                    <div class="col-sm">
-                                                        <div class="text-muted">
-                                                            Showing <span class="fw-semibold">5</span> of <span class="fw-semibold">25</span> Results
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-sm-auto  mt-3 mt-sm-0">
-                                                        <ul class="pagination pagination-separated pagination-sm mb-0 justify-content-center">
-                                                            <li class="page-item disabled">
-                                                                <a href="#" class="page-link">←</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">1</a>
-                                                            </li>
-                                                            <li class="page-item active">
-                                                                <a href="#" class="page-link">2</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">3</a>
-                                                            </li>
-                                                            <li class="page-item">
-                                                                <a href="#" class="page-link">→</a>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
+                                                if ($mysqli->connect_error) {
+                                                    die('Erreur de connexion (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+                                                }
 
-                                            </div> <!-- .card-body-->
-                                        </div> <!-- .card-->
-                                    </div> <!-- .col-->
-                                </div> <!-- end row-->
+                                                // Charger toutes les données
+                                                $result = $mysqli->query("SELECT id, nom_eleve, classe_eleve, montant_payer, motif_paiement, date_paiement, payment_status FROM eleve");
 
-                                <div class="row">
-                                    <div class="col-xl-4">
-                                        <div class="card card-height-100">
-                                            <div class="card-header align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Store Visits by Source</h4>
-                                                <div class="flex-shrink-0">
-                                                    <div class="dropdown card-header-dropdown">
-                                                        <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                            <span class="text-muted">Report<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                                        </a>
-                                                        <div class="dropdown-menu dropdown-menu-end">
-                                                            <a class="dropdown-item" href="#">Download Report</a>
-                                                            <a class="dropdown-item" href="#">Export</a>
-                                                            <a class="dropdown-item" href="#">Import</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card header -->
+                                                $mois_fr = [
+                                                    '01' => 'Janvier',
+                                                    '02' => 'Février',
+                                                    '03' => 'Mars',
+                                                    '04' => 'Avril',
+                                                    '05' => 'Mai',
+                                                    '06' => 'Juin',
+                                                    '07' => 'Juillet',
+                                                    '08' => 'Août',
+                                                    '09' => 'Septembre',
+                                                    '10' => 'Octobre',
+                                                    '11' => 'Novembre',
+                                                    '12' => 'Décembre'
+                                                ];
 
-                                            <div class="card-body">
-                                                <div id="store-visits-source" data-colors='["--vz-primary", "--vz-success", "--vz-warning", "--vz-danger", "--vz-info"]' data-colors-minimal='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' data-colors-interactive='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' data-colors-galaxy='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' class="apex-charts" dir="ltr"></div>
-                                            </div>
-                                        </div> <!-- .card-->
-                                    </div> <!-- .col-->
+                                                $payments_by_month = [];
+                                                $full_payments = [];
+
+                                                while ($row = $result->fetch_assoc()) {
+                                                    // Paiements par mois
+                                                    $mois = date('m', strtotime($row['date_paiement']));
+                                                    $mois_text = $mois_fr[$mois];
+
+                                                    if (!isset($payments_by_month[$mois_text])) {
+                                                        $payments_by_month[$mois_text] = 0;
+                                                    }
+                                                    $payments_by_month[$mois_text] += (float) $row['montant_payer'];
+
+                                                    // Paiements complets
+                                                    $full_payments[] = $row;
+                                                }
+
+                                                // Préparer pour le JavaScript
+                                                $categories_json = json_encode(array_keys($payments_by_month), JSON_UNESCAPED_UNICODE);
+                                                $series_json = json_encode(array_values($payments_by_month));
+                                                $full_payments_json = json_encode($full_payments, JSON_UNESCAPED_UNICODE);
+                                            ?>
+
+                                            <!-- Graphique -->
+                                            <div id="store-visits-source" class="apex-charts" dir="ltr"></div>
+
+                                            <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+                                            <script>
+                                                document.addEventListener("DOMContentLoaded", function () {
+                                                    var options = {
+                                                        chart: {
+                                                            type: 'donut',
+                                                            height: 350
+                                                        },
+                                                        labels: <?php echo $categories_json; ?>,
+                                                        series: <?php echo $series_json; ?>,
+                                                        colors: ['#34c38f', '#50a5f1', '#f1b44c', '#f46a6a', '#556ee6', '#34c38f', '#50a5f1', '#f1b44c', '#f46a6a', '#556ee6', '#34c38f', '#50a5f1'],
+                                                        legend: {
+                                                            position: 'bottom'
+                                                        }
+                                                    };
+
+                                                    var chart = new ApexCharts(document.querySelector("#store-visits-source"), options);
+                                                    chart.render();
+
+                                        
+
+                                                    // Bouton Télécharger en CSV avec style amélioré
+                                                    document.getElementById('export-data').addEventListener('click', function () {
+                                                        var payments = <?php echo $full_payments_json; ?>;
+
+                                                        // Titre avec des libellés lisibles
+                                                        var csv = 'ID,Nom de l\'élève,Classe,Montant payé,Motif du paiement,Date de paiement,Statut du paiement\n';
+
+                                                        payments.forEach(function(row) {
+                                                            csv += [
+                                                                row.id,
+                                                                '"' + capitalizeWords(row.nom_eleve) + '"', // Capitaliser les noms
+                                                                '"' + capitalizeWords(row.classe_eleve) + '"', // Capitaliser la classe
+                                                                parseFloat(row.montant_payer).toFixed(2), // 2 chiffres après la virgule
+                                                                '"' + capitalizeWords(row.motif_paiement) + '"',
+                                                                formatDate(row.date_paiement), // Formater la date proprement
+                                                                capitalizeWords(row.payement_status) // Exemple de capitalisation
+                                                            ].join(';') + '\n'; // Séparateur ; pour éviter les problèmes avec des virgules
+                                                        });
+
+                                                        var hiddenElement = document.createElement('a');
+                                                        hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                                                        hiddenElement.target = '_blank';
+                                                        hiddenElement.download = 'paiements_complet.csv';
+                                                        hiddenElement.click();
+                                                    });
+
+                                                    // Fonction pour capitaliser chaque mot
+                                                    function capitalizeWords(str) {
+                                                        if (!str) return '';
+                                                        return str.toLowerCase().replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+                                                    }
+
+                                                    // Fonction pour reformater la date en format plus joli (ex: 06 Mai 2025)
+                                                    function formatDate(dateStr) {
+                                                        const mois_fr = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+                                                        const date = new Date(dateStr);
+                                                        const day = String(date.getDate()).padStart(2, '0');
+                                                        const month = mois_fr[date.getMonth()];
+                                                        const year = date.getFullYear();
+                                                        return `${day} ${month} ${year}`;
+                                                    }
+
+
+                                                    // Bouton Importer
+                                                    document.getElementById('import-data').addEventListener('click', function () {
+                                                        document.getElementById('import-file').click();
+                                                    });
+
+                                                    document.getElementById('import-file').addEventListener('change', function (e) {
+                                                        var file = e.target.files[0];
+                                                        if (!file) return;
+
+                                                        var reader = new FileReader();
+                                                        reader.onload = function (e) {
+                                                            var content = e.target.result;
+                                                            console.log('Contenu importé :', content);
+                                                            // Tu peux ici ajouter du code pour parser et recharger les données
+                                                        };
+                                                        reader.readAsText(file);
+                                                    });
+                                                });
+                                            </script>
+                                        </div> <!-- end card body -->
+
+                                    </div> <!-- .card-->
+                                </div> <!-- .col-->
+
 
                                     <div class="col-xl-8">
                                         <div class="card">
@@ -1373,7 +1271,7 @@
                                                                     </div>
                                                                     <div class="flex-grow-1 ms-3">
                                                                         <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Great product and looks great, lots of features. "</p>
+                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Excellent service, le processus de paiement est fluide et efficace. "</p>
                                                                             <div
                                                                                 class="fs-11 align-middle text-warning">
                                                                                 <i class="ri-star-fill"></i>
@@ -1384,7 +1282,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="text-end mb-0 text-muted">
-                                                                            - by <cite title="Source Title">Force Medicines</cite>
+                                                                            - Par <cite title="Source Title">Margueritte K.</cite>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -1400,7 +1298,7 @@
                                                                     </div>
                                                                     <div class="flex-grow-1 ms-3">
                                                                         <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Amazing template, very easy to understand and manipulate. "</p>
+                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Système de paiement efficace et rapide, facilitant la gestion des frais scolaires. "</p>
                                                                             <div class="fs-11 align-middle text-warning">
                                                                                 <i class="ri-star-fill"></i>
                                                                                 <i class="ri-star-fill"></i>
@@ -1410,7 +1308,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="text-end mb-0 text-muted">
-                                                                            - by <cite title="Source Title">Henry Baird</cite>
+                                                                            - Par <cite title="Source Title">Jean-Paul M.</cite>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -1428,7 +1326,7 @@
                                                                     </div>
                                                                     <div class="flex-grow-1 ms-3">
                                                                         <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> "Very beautiful product and Very helpful customer service."</p>
+                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> "Système de paiement scolaire rapide et fiable, facilitant la gestion des frais pour les parents et les élèves."</p>
                                                                             <div class="fs-11 align-middle text-warning">
                                                                                 <i class="ri-star-fill"></i>
                                                                                 <i class="ri-star-fill"></i>
@@ -1438,7 +1336,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="text-end mb-0 text-muted">
-                                                                            - by <cite title="Source Title">Zoetic Fashion</cite>
+                                                                            - par <cite title="Source Title">Best Trading Pub</cite>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -1464,7 +1362,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="text-end mb-0 text-muted">
-                                                                            - by <cite title="Source Title">Nancy Martino</cite>
+                                                                            - Par <cite title="Source Title">Ahmad M.</cite>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2621,6 +2519,32 @@
 
     <!-- App js -->
     <script src="assets/js/app.js"></script>
+
+    <!-- API CDF-->
+    <script>
+        async function mettreAJourTaux() {
+        try {
+            // Exemple avec une API de taux de change (à adapter selon ton besoin réel)
+            const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await response.json();
+
+            // Taux de 1 USD en CDF par exemple
+            const tauxCDF = data.rates.CDF;
+
+            // Met à jour le texte dans ton span
+            document.getElementById('taux-jour').textContent = tauxCDF.toFixed(2);
+        } catch (error) {
+            console.error('Erreur lors de la récupération du taux:', error);
+        }
+    }
+
+    // Mettre à jour toutes les 5 minutes (par exemple)
+    setInterval(mettreAJourTaux, 5 * 60 * 1000);
+
+    // Appel immédiat au chargement
+    mettreAJourTaux();
+    </script>                                                     
+
 </body>
 
 
