@@ -1,55 +1,27 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "school";
+    require_once __DIR__ . '/../Controllers/AuthController.php';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+    $auth = new AuthController();
+    $message = "";
 
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $email = $_POST['Email'];
 
-$message = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $email = $_POST['Email'];
-
-  $check_sql = "SELECT * FROM Pupil WHERE Email = '$email'";
-  $result = $conn->query($check_sql);
-
-  if ($result->num_rows > 0) {
-    $new_password = bin2hex(random_bytes(4)); 
-    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-
-    $update_sql = "UPDATE Pupil SET Password_User = '$hashed_password' WHERE Email = '$email'";
-    if ($conn->query($update_sql) === TRUE) {
-      $to = $email;
-      $subject = "Mot de passe restauré";
-      $message_body = "Votre nouveau mot de passe est: $new_password";
-      $headers = "From: csppunilu@gmail.com";
-
-      if (mail($to, $subject, $message_body, $headers)) {
-        $message = "<p style='color: green; text-align: center;'>Un nouveau mot de passe a été envoyé à votre adresse e-mail.</p>";
-      } else {
-        $message = "<p style='color: red; text-align: center;'>Erreur lors de l'envoi de l'e-mail. Veuillez réessayer plus tard.</p>";
-      }
-    } else {
-      $message = "<p style='color: red; text-align: center;'>Erreur lors de la mise à jour du mot de passe. Veuillez réessayer plus tard.</p>";
+        $result = $auth->resetPassword($email);
+        $message = $result['success']
+            ? "<p style='color: green; text-align: center;'>{$result['message']}</p>"
+            : "<p style='color: red; text-align: center;'>{$result['message']}</p>";
     }
-  } else {
-    $message = "<p style='color: red; text-align: center;'>Aucun compte trouvé avec cette adresse e-mail.</p>";
-  }
-}
-
-$conn->close();
 ?>
 
+
 <!doctype html>
-<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
+<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
+    data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
 
 
 <!-- Mirrored from themesbrand.com/velzon/html/master/auth-pass-reset-cover.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 12 Aug 2024 07:46:59 GMT -->
+
 <head>
 
     <meta charset="utf-8" />
@@ -99,21 +71,29 @@ $conn->close();
                                                     <i class="ri-double-quotes-l display-4 text-success"></i>
                                                 </div>
 
-                                                <div id="qoutescarouselIndicators" class="carousel slide" data-bs-ride="carousel">
+                                                <div id="qoutescarouselIndicators" class="carousel slide"
+                                                    data-bs-ride="carousel">
                                                     <div class="carousel-indicators">
-                                                        <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-                                                        <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
-                                                        <button type="button" data-bs-target="#qoutescarouselIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                                                        <button type="button" data-bs-target="#qoutescarouselIndicators"
+                                                            data-bs-slide-to="0" class="active" aria-current="true"
+                                                            aria-label="Slide 1"></button>
+                                                        <button type="button" data-bs-target="#qoutescarouselIndicators"
+                                                            data-bs-slide-to="1" aria-label="Slide 2"></button>
+                                                        <button type="button" data-bs-target="#qoutescarouselIndicators"
+                                                            data-bs-slide-to="2" aria-label="Slide 3"></button>
                                                     </div>
                                                     <div class="carousel-inner text-center text-white-50 pb-5">
                                                         <div class="carousel-item active">
-                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design épuré, facile à personnaliser. Merci beaucoup ! "</p>
+                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design
+                                                                épuré, facile à personnaliser. Merci beaucoup ! "</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">" Le thème est vraiment génial avec un support client incroyable."</p>
+                                                            <p class="fs-15 fst-italic">" Le thème est vraiment génial
+                                                                avec un support client incroyable."</p>
                                                         </div>
                                                         <div class="carousel-item">
-                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design épuré, facile à personnaliser. Merci beaucoup ! "</p>
+                                                            <p class="fs-15 fst-italic">" Super ! Code propre, design
+                                                                épuré, facile à personnaliser. Merci beaucoup ! "</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -130,30 +110,36 @@ $conn->close();
                                         <p class="text-muted">Réinitialisez votre mot de passe.</p>
 
                                         <div class="mt-2 text-center">
-                                            <lord-icon
-                                                src="https://cdn.lordicon.com/rhvddzym.json" trigger="loop" colors="primary:#0ab39c" class="avatar-xl">
+                                            <lord-icon src="https://cdn.lordicon.com/rhvddzym.json" trigger="loop"
+                                                colors="primary:#0ab39c" class="avatar-xl">
                                             </lord-icon>
                                         </div>
 
                                         <div class="alert border-0 alert-warning text-center mb-2 mx-2" role="alert">
-                                            Entrez votre e-mail et des instructions vous seront envoyées via votre boite mail!
+                                            Entrez votre e-mail et des instructions vous seront envoyées via votre boite
+                                            mail!
                                         </div>
                                         <div class="p-2">
                                             <form method="POST">
                                                 <div class="mb-4">
                                                     <label class="form-label">Email</label>
-                                                    <input type="email" class="form-control" id="Email" name="Email" placeholder="Enter email address" required>
+                                                    <input type="email" class="form-control" id="Email" name="Email"
+                                                        placeholder="Enter email address" required>
                                                 </div>
 
                                                 <div class="text-center mt-4">
-                                                    <button class="btn btn-success w-100" type="submit">Send Reset Link</button>
+                                                    <button class="btn btn-success w-100"
+                                                        type="submit">Confirmer</button>
                                                 </div>
                                             </form><!-- end form -->
                                             <?php echo $message; ?>
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                            <p class="mb-0">Attendez, je me souviens de mon mot de passe... <a href="auth-signin-cover.php" class="fw-semibold text-primary text-decoration-underline"> Cliquez ici </a> </p>
+                                            <p class="mb-0">Attendez, je me souviens de mon mot de passe... <a
+                                                    href="auth-signin-cover.php"
+                                                    class="fw-semibold text-primary text-decoration-underline"> Cliquez
+                                                    ici </a> </p>
                                         </div>
                                     </div>
                                 </div>
@@ -179,7 +165,8 @@ $conn->close();
                     <div class="col-lg-12">
                         <div class="text-center">
                             <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script> Administration<i class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                <script>document.write(new Date().getFullYear())</script> Administration<i
+                                    class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>
@@ -197,8 +184,90 @@ $conn->close();
     <script src="assets/libs/feather-icons/feather.min.js"></script>
     <script src="assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
     <script src="assets/js/plugins.js"></script>
+    <!-- SEARCH LOGO -->
+    <script>
+        let a = 0;
+        let masque = document.createElement('div');
+        let logo = document.createElement('img');
+        let cercle = document.createElement('div');
+
+        let angle = 0;
+        let scale = 1;
+        let opacityLogo = 1;
+
+        window.addEventListener('load', () => {
+            a = 1;
+
+            // Le cercle et le logo commencent à bouger immédiatement
+            anime = setInterval(() => {
+                angle += 10; // Vitesse de rotation du cercle
+                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+                // Zoom progressif du logo
+                scale += 0.005;
+                opacityLogo -= 0.005;
+
+                logo.style.transform = `scale(${scale})`;
+                logo.style.opacity = opacityLogo;
+
+            }, 20);
+
+            // Après 1 seconde, on arrête l'animation
+            setTimeout(() => {
+                clearInterval(anime);
+                masque.style.opacity = '0';
+            }, 1000);
+
+            setTimeout(() => {
+                masque.style.visibility = 'hidden';
+            }, 1500);
+        });
+
+        // Création du masque
+        masque.style.width = '100%';
+        masque.style.height = '100vh';
+        masque.style.zIndex = 100000;
+        masque.style.background = '#ffffff';
+        masque.style.position = 'fixed';
+        masque.style.top = '0';
+        masque.style.left = '0';
+        masque.style.opacity = '1';
+        masque.style.transition = '0.5s ease';
+        masque.style.display = 'flex';
+        masque.style.justifyContent = 'center';
+        masque.style.alignItems = 'center';
+        document.body.appendChild(masque);
+
+        // Création du logo
+        logo.setAttribute('src', 'assets/images/logo_pp.png');
+        logo.style.width = '10vh';
+        logo.style.height = '10vh';
+        logo.style.position = 'relative';
+        logo.style.zIndex = '2';
+        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
+        masque.appendChild(logo);
+
+        // Création du cercle autour du logo
+        cercle.style.width = '15vh';
+        cercle.style.height = '15vh';
+        cercle.style.border = '3px solid #e12c4e';
+        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.borderRadius = '50%';
+        cercle.style.position = 'absolute';
+        cercle.style.top = '50%';
+        cercle.style.left = '50%';
+        cercle.style.transform = 'translate(-50%, -50%)';
+        cercle.style.boxSizing = 'border-box';
+        cercle.style.zIndex = '1';
+        masque.appendChild(cercle);
+
+        // Variables de l'animation
+        let anime;
+
+    </script>
 </body>
 
 
 <!-- Mirrored from themesbrand.com/velzon/html/master/auth-pass-reset-cover.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 12 Aug 2024 07:46:59 GMT -->
+
 </html>

@@ -1,53 +1,17 @@
 <?php
-    session_start();
+   require_once __DIR__ . '/../Controllers/AuthController.php';
 
-    // Connexion à la base de données
-    $servername = "localhost";
-    $username = "root";
-    $password = "";
-    $dbname = "school";
-
-    $conn = new mysqli($servername, $username, $password, $dbname);
-
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
+    $auth = new AuthController();
 
     $message = "";
 
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $names = $_POST['Names_User'];
         $password = $_POST['Password_User'];
-
-        // Requête pour récupérer l'utilisateur
-        $sql = "SELECT * FROM Pupil WHERE Names_User = '$names'";
-        $result = $conn->query($sql);
-
-        if ($result->num_rows > 0) {
-            $row = $result->fetch_assoc();
-            if (password_verify($password, $row['Password_User'])) {
-                // Stocker les informations de l'utilisateur dans la session
-                $_SESSION['username'] = $row['Names_User'];
-                $_SESSION['user_id'] = $row['id']; // Assurez-vous que l'ID utilisateur est récupéré
-
-                // Mettre à jour le champ `is_connected` à 1
-                $userId = $row['id'];
-                $sqlUpdate = "UPDATE Pupil SET is_connected = 1 WHERE id = '$userId'";
-                $conn->query($sqlUpdate);
-
-                // Rediriger vers le tableau de bord
-                header("Location: Dashboad.php");
-                exit();
-            } else {
-                $message = "<p style='color: red; text-align: center;'>Mot de passe incorrect. Veuillez réessayer.</p>";
-            }
-        } else {
-            $message = "<p style='color: red; text-align: center;'>Nom d'utilisateur incorrect. Veuillez réessayer ou créer un nouveau compte.</p>";
-        }
+        $message = $auth->login($names, $password);
     }
-
-    $conn->close();
 ?>
+
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
 
@@ -94,7 +58,7 @@
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
                                                 <a href="#" class="d-block">
-                                                    <img src="assets/images/login.png" alt="" height="50" style="filter: brightness(0) invert(1); transition: filter 0.3s ease;" onmouseover="this.style.filter='none'" onmouseout="this.style.filter='brightness(0) invert(1)'">
+                                                    <img src="assets/images/login.png" alt="" height="50">
                                                 </a>
                                             </div>
                                             <div class="mt-auto">
@@ -129,12 +93,16 @@
 
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4">
+                                        <div class="text-center my-3">
+                                            <img src="assets/images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
+                                        </div>
                                         <div>
                                             <h5 class="text-primary">Bienvenue !</h5>
                                             <p class="text-muted">Connectez-vous pour continuer.</p>
                                         </div>
 
                                         <div class="mt-4">
+
                                             <?php echo $message; ?>
                                             <form action="#" method="POST">
 
@@ -177,7 +145,7 @@
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                            <p class="mb-0">Pas encore de compte ? <a href="auth-signup-cover.php" class="fw-semibold text-primary text-decoration-underline">Créer un compte</a> </p>
+                                            <p class="mb-0">Pas encore de compte ? <a href="?search=./assets/Connexion/auth-signup-cover.php" class="fw-semibold text-primary text-decoration-underline">Créer un compte</a> </p>
                                         </div>
                                     </div>
                                 </div>
@@ -224,6 +192,88 @@
 
     <!-- password-addon init -->
     <script src="assets/js/pages/password-addon.init.js"></script>
+
+    <!-- SEARCH LOGO -->
+    <script>
+        let a = 0;
+        let masque = document.createElement('div');
+        let logo = document.createElement('img');
+        let cercle = document.createElement('div');
+
+        let angle = 0;
+        let scale = 1;
+        let opacityLogo = 1;
+
+        window.addEventListener('load', () => {
+            a = 1;
+
+            // Le cercle et le logo commencent à bouger immédiatement
+            anime = setInterval(() => {
+                angle += 10; // Vitesse de rotation du cercle
+                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+                // Zoom progressif du logo
+                scale += 0.005;
+                opacityLogo -= 0.005;
+
+                logo.style.transform = `scale(${scale})`;
+                logo.style.opacity = opacityLogo;
+
+            }, 20);
+
+            // Après 1 seconde, on arrête l'animation
+            setTimeout(() => {
+                clearInterval(anime);
+                masque.style.opacity = '0';
+            }, 1000);
+
+            setTimeout(() => {
+                masque.style.visibility = 'hidden';
+            }, 1500);
+        });
+
+        // Création du masque
+        masque.style.width = '100%';
+        masque.style.height = '100vh';
+        masque.style.zIndex = 100000;
+        masque.style.background = '#ffffff';
+        masque.style.position = 'fixed';
+        masque.style.top = '0';
+        masque.style.left = '0';
+        masque.style.opacity = '1';
+        masque.style.transition = '0.5s ease';
+        masque.style.display = 'flex';
+        masque.style.justifyContent = 'center';
+        masque.style.alignItems = 'center';
+        document.body.appendChild(masque);
+
+        // Création du logo
+        logo.setAttribute('src', 'assets/images/logo_pp.png');
+        logo.style.width = '10vh';
+        logo.style.height = '10vh';
+        logo.style.position = 'relative';
+        logo.style.zIndex = '2';
+        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
+        masque.appendChild(logo);
+
+        // Création du cercle autour du logo
+        cercle.style.width = '15vh';
+        cercle.style.height = '15vh';
+        cercle.style.border = '3px solid #e12c4e';
+        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.borderRadius = '50%';
+        cercle.style.position = 'absolute';
+        cercle.style.top = '50%';
+        cercle.style.left = '50%';
+        cercle.style.transform = 'translate(-50%, -50%)';
+        cercle.style.boxSizing = 'border-box';
+        cercle.style.zIndex = '1';
+        masque.appendChild(cercle);
+
+        // Variables de l'animation
+        let anime;
+
+    </script>
 </body>
 
 

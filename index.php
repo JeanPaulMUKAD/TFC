@@ -13,6 +13,6 @@
     }
      else
      {
-         include("./assets/Connexion/auth-signin-cover.php"); // Modification ici
+         include("./assets/Connexion/auth-signin-cover.php");
      }
  ?>

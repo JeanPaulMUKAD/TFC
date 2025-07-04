@@ -1,81 +1,9 @@
 <?php
-    session_start();
+    require_once 'assets/Controllers/AuthController.php';
 
-    // Connexion à la base de données
-    $servername = "localhost";
-    $username = "root";
-    $password = "";
-    $dbname = "school";
-    
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-    
-    // Initialiser la variable $currentConnected
-    $currentConnected = 0;
-    
-    // Requête pour récupérer le nombre actuel d'utilisateurs connectés
-    $sql = "SELECT COUNT(*) AS total_connected FROM Pupil WHERE is_connected = 1";
-    $result = $conn->query($sql);
-    
-    if ($result && $result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $currentConnected = $row['total_connected'];
-    }
-    
-    // Initialiser la variable $connectedUsers
-    $connectedUsers = [];
-    
-    // Requête pour récupérer les noms des utilisateurs connectés
-    $sqlUsers = "SELECT Names_User FROM Pupil WHERE is_connected = 1";
-    $resultUsers = $conn->query($sqlUsers);
-    
-    if ($resultUsers && $resultUsers->num_rows > 0) {
-        while ($row = $resultUsers->fetch_assoc()) {
-            $connectedUsers[] = $row['Names_User'];
-        }
-    }
-    
-    // Stocker l'utilisateur connecté dans la session
-    // Attention : ici, je suppose que tu veux prendre **l'utilisateur qui correspond à la session**.
-    // Sinon, pour le test, on prend juste le premier connecté :
-    if (!empty($connectedUsers)) {
-        $_SESSION['username'] = $connectedUsers[0]; // Premier utilisateur connecté
-    } else {
-        $_SESSION['username'] = null;
-    }
+    $auth = new AuthController();
+    $data = $auth->getDashboardStatistics();
 
-    // Paiements : Récupérer le nombre total d'élèves ayant payé par classe
-    $paymentsByClass = [];
-    $currentPayments = 0;
-
-    $sqlPaymentsByClass = "SELECT classe_eleve, COUNT(*) AS total_paiements FROM eleve WHERE montant_payer IS NOT NULL GROUP BY classe_eleve";
-    $resultPaymentsByClass = $conn->query($sqlPaymentsByClass);
-
-    if ($resultPaymentsByClass && $resultPaymentsByClass->num_rows > 0) {
-        while ($row = $resultPaymentsByClass->fetch_assoc()) {
-            $paymentsByClass[$row['classe_eleve']] = $row['total_paiements'];
-        }
-    }
-
-    // Calculer le nombre total de paiements
-    $currentPayments = array_sum($paymentsByClass);
-
-    // Définir un nombre de référence pour calculer le pourcentage de changement
-    $previousPayments = 100; // Exemple : valeur de référence (peut être récupérée dynamiquement)
-
-    // Calculer le pourcentage de changement pour les paiements
-    if ($previousPayments > 0) {
-        $paymentPercentageChange = (($currentPayments - $previousPayments) / $previousPayments) * 100;
-    } else {
-        $paymentPercentageChange = 0; // Si aucune donnée précédente, le pourcentage est 0
-    }
-
-    // Déterminer la classe CSS pour indiquer une augmentation ou une diminution des paiements
-    $paymentPercentageClass = $paymentPercentageChange >= 0 ? "text-success" : "text-danger";
-    $paymentPercentageIcon = $paymentPercentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-right-down-line";
 ?>
 
 <!doctype html>
@@ -91,7 +19,7 @@
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="Themesbrand" name="author" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <link rel="shortcut icon" href="assets/images/logo_pp.png">
 
     <!-- jsvectormap css -->
     <link href="assets/libs/jsvectormap/css/jsvectormap.min.css" rel="stylesheet" type="text/css" />
@@ -274,20 +202,18 @@
                 <div class="dropdown ms-sm-3 header-item topbar-user">
                     <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <span class="d-flex align-items-center">
-                            <img class="rounded-circle header-profile-user" src="assets/images/users/avatar-1.jpg" alt="Header Avatar">
+                            <img class="rounded-circle header-profile-user" src="assets/images/logo_pp2.png" alt="Header Avatar">
                             <span class="text-start ms-xl-2">
-                                <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">Administration</span>
-                                <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">C.S.P.P.UNILU</span>
+                                <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text"><?php echo $_SESSION['username'] ?></span>
+                                <span class="d-block fs-14 sidebar-user-name-sub-text"><i class="ri ri-circle-fill fs-10 text-success align-baseline"></i> <span class="align-middle">En ligne</span></span>
                             </span>
                         </span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end">
                         <!-- item-->
                         <h6 class="dropdown-header">Administration</h6>
-                        <a class="dropdown-item" href="pages-profile.php"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profil</span></a>
-                        <a class="dropdown-item" href="apps-chat.php"><i class="mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Messages</span></a>
-                        <a class="dropdown-item" href="auth-lockscreen-cover.php"><i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Lock screen</span></a>
-                        <a class="dropdown-item" href="auth-logout-basic.php"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Deconnexion</span></a>
+                        <a class="dropdown-item" href="#"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profil</span></a>
+                        <a class="dropdown-item" href="#"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Deconnexion</span></a>
                     </div>
                 </div>
             </div>
@@ -326,19 +252,19 @@
                 <!-- Dark Logo-->
                 <a href="index.php" class="logo logo-dark">
                     <span class="logo-sm">
-                        <img src="assets/images/logo-sm.png" alt="" height="22">
+                        <img src="assets/images/logo_pp2.png" alt="" height="22">
                     </span>
                     <span class="logo-lg">
-                        <img src="assets/images/logo-dark.png" alt="" height="17">
+                        <img src="assets/images/logo_pp2.png" alt="" height="17">
                     </span>
                 </a>
                 <!-- Light Logo-->
                 <a href="index.php" class="logo logo-light">
                     <span class="logo-sm">
-                        <img src="assets/images/logo-sm.png" alt="" height="22">
+                        <img src="assets/images/logo_pp2.png" alt="" height="22">
                     </span>
                     <span class="logo-lg">
-                        <img src="assets/images/logo-light.png" alt="" height="17">
+                        <img src="assets/images/logo_pp2.png" alt="" height="17">
                     </span>
                 </a>
                 <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">
@@ -349,25 +275,18 @@
             <div class="dropdown sidebar-user m-1 rounded">
                 <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="d-flex align-items-center gap-2">
-                        <img class="rounded header-profile-user" src="assets/images/users/avatar-1.jpg" alt="Header Avatar">
+                        <img class="rounded header-profile-user" src="assets/images/logo_pp2.png" alt="Header Avatar">
                         <span class="text-start">
-                            <span class="d-block fw-medium sidebar-user-name-text">Administration </span>
-                            <span class="d-block fs-14 sidebar-user-name-sub-text"><i class="ri ri-circle-fill fs-10 text-success align-baseline"></i> <span class="align-middle">Online</span></span>
+                            <span class="d-block fw-medium sidebar-user-name-text"><?php echo $_SESSION['username'] ?></span>
+                            <span class="d-block fs-14 sidebar-user-name-sub-text"><i class="ri ri-circle-fill fs-10 text-success align-baseline"></i> <span class="align-middle">En ligne</span></span>
                         </span>
                     </span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end">
                     <!-- item-->
-                    <h6 class="dropdown-header">Welcome Anna!</h6>
-                    <a class="dropdown-item" href="pages-profile.php"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
-                    <a class="dropdown-item" href="./assets/chat/apps-chat.php"><i class="mdi mdi-message-text-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Messages</span></a>
-                    <a class="dropdown-item" href="apps-tasks-kanban.php"><i class="mdi mdi-calendar-check-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Taskboard</span></a>
-                    <a class="dropdown-item" href="pages-faqs.php"><i class="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Help</span></a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="pages-profile.php"><i class="mdi mdi-wallet text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Balance : <b>$5971.67</b></span></a>
-                    <a class="dropdown-item" href="pages-profile-settings.php"><span class="badge bg-success-subtle text-success mt-1 float-end">New</span><i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Settings</span></a>
-                    <a class="dropdown-item" href="auth-lockscreen-basic.php"><i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Lock screen</span></a>
-                    <a class="dropdown-item" href="auth-logout-basic.php"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Logout</span></a>
+                    <h6 class="dropdown-header">Bonjour <?php echo $_SESSION['username'] ?></h6>
+                    <a class="dropdown-item" href="#"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
+                    <a class="dropdown-item" href="#"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Deconnexion</span></a>
                 </div>
             </div>
             <div id="scrollbar">
@@ -389,7 +308,7 @@
                                         <a href="#" class="nav-link" data-key="t-ecommerce"> Analyses </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="./assets/Paiements/Paiement.php" class="nav-link" data-key="t-ecommerce"> Paiements </a>
+                                        <a href="./assets/Paiements/Paiement.php" class="nav-link" data-key="t-ecommerce"> Paiement </a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="./assets/Paiements/historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Historiques </a>
@@ -409,69 +328,44 @@
                             <div class="collapse menu-dropdown" id="sidebarAuth">
                                 <ul class="nav nav-sm flex-column">
                                     <li class="nav-item">
-                                        <a href="#sidebarSignIn" class="nav-link" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSignIn" data-key="t-signin"> Se connecter
-                                        </a>
-                                        <div class="collapse menu-dropdown" id="sidebarSignIn">
-                                            <ul class="nav nav-sm flex-column">
-                                               
-                                                <li class="nav-item">
-                                                    <a href="auth-signin-cover.php" class="nav-link" data-key="t-cover"> Cover
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
+                                        <a href="auth-signin-cover.php" class="nav-link"> Se connecter</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="#sidebarSignUp" class="nav-link" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSignUp" data-key="t-signup"> Créer un compte
-                                        </a>
-                                        <div class="collapse menu-dropdown" id="sidebarSignUp">
-                                            <ul class="nav nav-sm flex-column">
-                                               
-                                                <li class="nav-item">
-                                                    <a href="auth-signup-cover.php" class="nav-link" data-key="t-cover"> Cover
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
+                                        <a href="auth-signup-cover.php" class="nav-link"> Créer un compte</a>
+                                        
                                     </li>
 
                                     <li class="nav-item">
-                                        <a href="#sidebarResetPass" class="nav-link" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarResetPass" data-key="t-password-reset">
-                                        Mot de passe oublié
-                                        </a>
-                                        <div class="collapse menu-dropdown" id="sidebarResetPass">
-                                            <ul class="nav nav-sm flex-column">
-                                               
-                                                <li class="nav-item">
-                                                    <a href="auth-pass-reset-cover.php" class="nav-link" data-key="t-cover">
-                                                        Cover </a>
-                                                </li>
-                                            </ul>
-                                        </div>
+                                        <a href="auth-pass-reset-cover.php" class="nav-link">Mot de passe oublié</a>
+                                        
                                     </li>
 
-                                    
-
-                                    
-
                                     <li class="nav-item">
-                                        <a href="#sidebarLogout" class="nav-link" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLogout" data-key="t-logout"> Deconnexion
-                                        </a>
-                                        <div class="collapse menu-dropdown" id="sidebarLogout">
-                                            <ul class="nav nav-sm flex-column">
-                                               
-                                                <li class="nav-item">
-                                                    <a href="auth-logout-cover.php" class="nav-link" data-key="t-cover"> Cover
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
+                                        <a href="auth-logout-cover.php" class="nav-link"> Deconnexion</a>
+                                        
                                     </li>
                                    
                                     
                                 </ul>
                             </div>
                         </li>
+
+                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-comptes">Comptes</span></li>
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarCompte" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCompte">
+                                <i class="ri-user-line"></i> <span data-key="t-comptes">Gestion des comptes</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarCompte">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="./assets/Comptes/AddParent.php" class="nav-link">Gérer les Parents</a>
+                                    </li>
+                                    
+                                </ul>
+                            </div>
+                        </li>
+
                     </ul>
                 </div>
                 <!-- Sidebar -->
@@ -572,7 +466,7 @@
                                                 <div class="d-flex align-items-end justify-content-between mt-4">
                                                     <div>
                                                         <h4 class="fs-22 fw-semibold ff-secondary mb-4">
-                                                            <?php echo $currentPayments; ?> paiements
+                                                            <?php echo $data['currentPayments']; ?> paiements
                                                         </h4>
                                                         <!--<ul>
                                                             <?php foreach ($paymentsByClass as $class => $total): ?>
@@ -696,20 +590,7 @@
                                         <div class="card">
                                             <div class="card-header border-0 align-items-center d-flex">
                                                 <h4 class="card-title mb-0 flex-grow-1">Revenu des paiements</h4>
-                                                <div>
-                                                    <button type="button" class="btn btn-soft-secondary material-shadow-none btn-sm">
-                                                        Tout
-                                                    </button>
-                                                    <button type="button" class="btn btn-soft-secondary material-shadow-none btn-sm">
-                                                        1M
-                                                    </button>
-                                                    <button type="button" class="btn btn-soft-secondary material-shadow-none btn-sm">
-                                                        6M
-                                                    </button>
-                                                    <button type="button" class="btn btn-soft-primary material-shadow-none btn-sm">
-                                                        1A
-                                                    </button>
-                                                </div>
+                                                
                                             </div><!-- end card header -->
 
                                             <div class="card-header p-0 border-0 bg-light-subtle">
@@ -738,7 +619,7 @@
                                                                 $row = $result->fetch_assoc();
                                                                 $currentPayments = $row['total'];
                                                             }
-                                                             // Supposons que tu as déjà récupéré ton taux du jour (ex: depuis une API ou une valeur fixe)
+                                                             
                                                             $tauxJour = 2886.15;
 
                                                             // Calcul du pourcentage
@@ -857,14 +738,14 @@
                                                                 xaxis: {
                                                                     categories: <?php echo $months_json; ?>,
                                                                     labels: {
-                                                                        rotate: -45, // Incliner les labels pour éviter qu'ils se chevauchent
+                                                                        rotate: -45, 
                                                                         style: {
                                                                             fontSize: '12px',
                                                                             colors: '#6c757d'
                                                                         }
                                                                     }
                                                                 },
-                                                                colors: ['#34c38f'], // Couleur verte
+                                                                colors: ['#34c38f'],
                                                             };
 
                                                             var chart = new ApexCharts(document.querySelector("#customer_impression_charts"), options);
@@ -884,35 +765,74 @@
                                             <div class="card-header align-items-center d-flex">
                                                 <h4 class="card-title mb-0 flex-grow-1">Sales by Locations</h4>
                                                 <div class="flex-shrink-0">
-                                                    <button type="button" class="btn btn-soft-primary material-shadow-none btn-sm">
-                                                        Export Report
-                                                    </button>
+                                                   
                                                 </div>
                                             </div><!-- end card header -->
 
                                             <!-- card body -->
-                                            <div class="card-body">
+                                            <?php
+                                                // Connexion MySQL
+                                                $host = 'localhost';
+                                                $db   = 'school';
+                                                $user = 'root'; 
+                                                $pass = '';
 
-                                                <div id="sales-by-locations" data-colors='["--vz-light", "--vz-success", "--vz-primary"]' data-colors-interactive='["--vz-light", "--vz-info", "--vz-primary"]' style="height: 269px" dir="ltr"></div>
+                                                $mysqli = new mysqli($host, $user, $pass, $db);
 
-                                                <div class="px-2 py-2 mt-1">
-                                                    <p class="mb-1">Canada <span class="float-end">75%</span></p>
-                                                    <div class="progress mt-2" style="height: 6px;">
-                                                        <div class="progress-bar progress-bar-striped bg-primary" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="75"></div>
-                                                    </div>
+                                                if ($mysqli->connect_error) {
+                                                    die('Erreur de connexion (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+                                                }
 
-                                                    <p class="mt-3 mb-1">Greenland <span class="float-end">47%</span>
-                                                    </p>
-                                                    <div class="progress mt-2" style="height: 6px;">
-                                                        <div class="progress-bar progress-bar-striped bg-primary" role="progressbar" style="width: 47%" aria-valuenow="47" aria-valuemin="0" aria-valuemax="47"></div>
-                                                    </div>
+                                                // Récupérer les paiements par classe
+                                                $result = $mysqli->query("
+                                                    SELECT classe_eleve, 
+                                                        COUNT(CASE WHEN montant_payer > 0 THEN 1 END) AS payes, 
+                                                        COUNT(*) AS total
+                                                    FROM eleve
+                                                    GROUP BY classe_eleve
+                                                ");
 
-                                                    <p class="mt-3 mb-1">Russia <span class="float-end">82%</span></p>
-                                                    <div class="progress mt-2" style="height: 6px;">
-                                                        <div class="progress-bar progress-bar-striped bg-primary" role="progressbar" style="width: 82%" aria-valuenow="82" aria-valuemin="0" aria-valuemax="82"></div>
-                                                    </div>
+                                                $classes = [];
+                                                $paiements = [];
+
+                                                while ($row = $result->fetch_assoc()) {
+                                                    $classes[] = $row['classe_eleve'];
+                                                    $pourcentage = $row['total'] > 0 ? round($row['payes'] + $row['payes']): 0;
+                                                    $paiements[] = $pourcentage;
+                                                }
+                                                ?>
+
+                                                <div class="card-body">
+                                                    <h4 class="card-title mb-3">Avancement des paiements par classe</h4>
+
+                                                    <?php foreach ($classes as $index => $classe): 
+                                                        $pourcentage = $paiements[$index];
+                                                        // Définir une couleur différente selon le pourcentage
+                                                        if ($pourcentage >= 80) {
+                                                            $barClass = 'bg-success';
+                                                        } elseif ($pourcentage >= 50) {
+                                                            $barClass = 'bg-info';
+                                                        } elseif ($pourcentage >= 30) {
+                                                            $barClass = 'bg-warning';
+                                                        } else {
+                                                            $barClass = 'bg-danger';
+                                                        }
+                                                    ?>
+                                                        <div class="mb-3">
+                                                            <div class="d-flex justify-content-between">
+                                                                <span><strong><?php echo htmlspecialchars($classe); ?></strong></span>
+                                                                <span><?php echo $pourcentage; ?>%</span>
+                                                            </div>
+                                                            <div class="progress" style="height: 8px;">
+                                                                <div class="progress-bar progress-bar-striped <?php echo $barClass; ?>" role="progressbar" 
+                                                                    style="width: <?php echo $pourcentage; ?>%;" aria-valuenow="<?php echo $pourcentage; ?>" 
+                                                                    aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
                                                 </div>
-                                            </div>
+
+                                              
                                             <!-- end card body -->
                                         </div>
                                         <!-- end card -->
@@ -1092,12 +1012,9 @@
                                             <div class="card-header align-items-center d-flex">
                                                 <h4 class="card-title mb-0 flex-grow-1">Recent Orders</h4>
                                                 <div class="flex-shrink-0">
-                                                    <button type="button" class="btn btn-soft-info btn-sm material-shadow-none">
-                                                        <i class="ri-file-list-3-line align-middle"></i> Generate Report
-                                                    </button>
+                                                    
                                                 </div>
                                             </div><!-- end card header -->
-
                                             <div class="card-body">
                                                 <div class="table-responsive table-card">
                                                     <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
@@ -1245,270 +1162,7 @@
 
                         </div> <!-- end col -->
 
-                        <div class="col-auto layout-rightside-col">
-                            <div class="overlay"></div>
-                            <div class="layout-rightside">
-                                <div class="card h-100 rounded-0">
-                                    <div class="card-body p-0">
-                                        <div class="p-3">
-                                            <h6 class="text-muted mb-0 text-uppercase fw-semibold">Autres</h6>
-                                        </div>
-                                       
-
-                                        <div class="p-3">
-                                            <h6 class="text-muted mb-3 text-uppercase fw-semibold">Commentaires</h6>
-                                            <!-- Swiper -->
-                                            <div class="swiper vertical-swiper" style="height: 250px;">
-                                                <div class="swiper-wrapper">
-                                                    <div class="swiper-slide">
-                                                        <div class="card border border-dashed shadow-none">
-                                                            <div class="card-body">
-                                                                <div class="d-flex">
-                                                                    <div class="flex-shrink-0 avatar-sm">
-                                                                        <div class="avatar-title bg-light rounded material-shadow">
-                                                                            <img src="assets/images/companies/img-1.png" alt="" height="30">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3">
-                                                                        <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Excellent service, le processus de paiement est fluide et efficace. "</p>
-                                                                            <div
-                                                                                class="fs-11 align-middle text-warning">
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="text-end mb-0 text-muted">
-                                                                            - Par <cite title="Source Title">Margueritte K.</cite>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="swiper-slide">
-                                                        <div class="card border border-dashed shadow-none">
-                                                            <div class="card-body">
-                                                                <div class="d-flex">
-                                                                    <div class="flex-shrink-0">
-                                                                        <img src="assets/images/users/avatar-3.jpg" alt="" class="avatar-sm rounded material-shadow">
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3">
-                                                                        <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> " Système de paiement efficace et rapide, facilitant la gestion des frais scolaires. "</p>
-                                                                            <div class="fs-11 align-middle text-warning">
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-half-fill"></i>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="text-end mb-0 text-muted">
-                                                                            - Par <cite title="Source Title">Jean-Paul M.</cite>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="swiper-slide">
-                                                        <div class="card border border-dashed shadow-none">
-                                                            <div class="card-body">
-                                                                <div class="d-flex">
-                                                                    <div class="flex-shrink-0 avatar-sm">
-                                                                        <div class="avatar-title bg-light rounded">
-                                                                            <img src="assets/images/companies/img-8.png" alt="" height="30">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3">
-                                                                        <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines"> "Système de paiement scolaire rapide et fiable, facilitant la gestion des frais pour les parents et les élèves."</p>
-                                                                            <div class="fs-11 align-middle text-warning">
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-line"></i>
-                                                                                <i class="ri-star-line"></i>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="text-end mb-0 text-muted">
-                                                                            - par <cite title="Source Title">Best Trading Pub</cite>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="swiper-slide">
-                                                        <div class="card border border-dashed shadow-none">
-                                                            <div class="card-body">
-                                                                <div class="d-flex">
-                                                                    <div class="flex-shrink-0">
-                                                                        <img src="assets/images/users/avatar-2.jpg" alt="" class="avatar-sm rounded material-shadow">
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3">
-                                                                        <div>
-                                                                            <p class="text-muted mb-1 fst-italic text-truncate-two-lines">" The product is very beautiful. I like it. "</p>
-                                                                            <div class="fs-11 align-middle text-warning">
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-fill"></i>
-                                                                                <i class="ri-star-half-fill"></i>
-                                                                                <i class="ri-star-line"></i>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="text-end mb-0 text-muted">
-                                                                            - Par <cite title="Source Title">Ahmad M.</cite>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="p-3">
-                                            <h6 class="text-muted mb-3 text-uppercase fw-semibold">Etats des commentaires</h6>
-                                            <div class="bg-light px-3 py-2 rounded-2 mb-2">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1">
-                                                        <div class="fs-16 align-middle text-warning">
-                                                            <i class="ri-star-fill"></i>
-                                                            <i class="ri-star-fill"></i>
-                                                            <i class="ri-star-fill"></i>
-                                                            <i class="ri-star-fill"></i>
-                                                            <i class="ri-star-half-fill"></i>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h6 class="mb-0">4.5 out of 5</h6>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="text-center">
-                                                <div class="text-muted">Total <span class="fw-medium">5.50k</span> reviews</div>
-                                            </div>
-
-                                            <div class="mt-3">
-                                                <div class="row align-items-center g-2">
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0">5 star</h6>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col">
-                                                        <div class="p-1">
-                                                            <div class="progress animated-progress progress-sm">
-                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 50.16%" aria-valuenow="50.16" aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0 text-muted">2758</h6>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- end row -->
-
-                                                <div class="row align-items-center g-2">
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0">4 star</h6>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col">
-                                                        <div class="p-1">
-                                                            <div class="progress animated-progress progress-sm">
-                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 29.32%" aria-valuenow="29.32" aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0 text-muted">1063</h6>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- end row -->
-
-                                                <div class="row align-items-center g-2">
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0">3 star</h6>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col">
-                                                        <div class="p-1">
-                                                            <div class="progress animated-progress progress-sm">
-                                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 18.12%" aria-valuenow="18.12" aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0 text-muted">997</h6>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- end row -->
-
-                                                <div class="row align-items-center g-2">
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0">2 star</h6>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col">
-                                                        <div class="p-1">
-                                                            <div class="progress animated-progress progress-sm">
-                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 4.98%" aria-valuenow="4.98" aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0 text-muted">227</h6>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- end row -->
-
-                                                <div class="row align-items-center g-2">
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0">1 star</h6>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col">
-                                                        <div class="p-1">
-                                                            <div class="progress animated-progress progress-sm">
-                                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 7.42%" aria-valuenow="7.42" aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <div class="p-1">
-                                                            <h6 class="mb-0 text-muted">408</h6>
-                                                        </div>
-                                                    </div>
-                                                </div><!-- end row -->
-                                            </div>
-                                        </div>
-
-
-                                    </div>
-                                </div> <!-- end card-->
-                            </div> <!-- end .rightbar-->
-
-                        </div> <!-- end col -->
+                      
                     </div>
 
                 </div>
@@ -1562,15 +1216,16 @@
     <!-- Theme Settings -->
     <div class="offcanvas offcanvas-end border-0" tabindex="-1" id="theme-settings-offcanvas">
         <div class="d-flex align-items-center bg-primary bg-gradient p-3 offcanvas-header">
-            <h5 class="m-0 me-2 text-white">Theme Customizer</h5>
+            <h5 class="m-0 me-2 text-white">Options supplementaires</h5>
 
             <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <div data-simplebar class="h-100">
                 <div class="p-4">
-                    <h6 class="mb-0 fw-semibold text-uppercase">Layout</h6>
-                    <p class="text-muted">Choose your layout</p>
+                   <h6 class="mb-0 fw-semibold text-uppercase">Disposition</h6>
+                    <p class="text-muted">Choisissez votre disposition</p>
+
 
                     <div class="row gy-3">
                         <div class="col-4">
@@ -1644,44 +1299,20 @@
                                     </span>
                                 </label>
                             </div>
-                            <h5 class="fs-13 text-center mt-2">Two Column</h5>
+                            <h5 class="fs-13 text-center mt-2">A deux colonnes</h5>
                         </div>
                         <!-- end col -->
 
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input id="customizer-layout04" name="data-layout" type="radio" value="semibox" class="form-check-input">
-                                <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="customizer-layout04">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0 p-1">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column pt-1 pe-2">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h5 class="fs-13 text-center mt-2">Semi Box</h5>
-                        </div>
-                        <!-- end col -->
+                        
                     </div>
 
                     <div class="form-check form-switch form-switch-md mb-3 mt-4">
                         <input type="checkbox" class="form-check-input" id="sidebarUserProfile">
-                        <label class="form-check-label" for="sidebarUserProfile">Sidebar User Profile Avatar</label>
+                        <label class="form-check-label" for="sidebarUserProfile">Avatar du profil utilisateur dans la barre latérale</label>
                     </div>
 
                     <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Theme</h6>
-                    <p class="text-muted">Choose your suitable Theme.</p>
+                    <p class="text-muted">Chosir votre thème préféré.</p>
 
                     <div class="row">
                         <div class="col-6">
@@ -1815,7 +1446,7 @@
                                         </span>
                                     </label>
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Light</h5>
+                                <h5 class="fs-13 text-center mt-2">Blanc</h5>
                             </div>
 
                             <div class="col-4">
@@ -1840,7 +1471,7 @@
                                         </span>
                                     </label>
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Dark</h5>
+                                <h5 class="fs-13 text-center mt-2">Noir</h5>
                             </div>
                         </div>
                     </div>
@@ -1893,76 +1524,10 @@
                         </div>
                     </div>
 
-                    <div id="layout-width">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Layout Width</h6>
-                        <p class="text-muted">Choose Fluid or Boxed layout.</p>
+                    <div id="layout-width"></div>
 
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-width" id="layout-width-fluid" value="fluid">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="layout-width-fluid">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Fluid</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-width" id="layout-width-boxed" value="boxed">
-                                    <label class="form-check-label p-0 avatar-md w-100 px-2 material-shadow" for="layout-width-boxed">
-                                        <span class="d-flex gap-1 h-100 border-start border-end">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Boxed</h5>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="layout-position"></div>
 
-                    <div id="layout-position">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Layout Position</h6>
-                        <p class="text-muted">Choose Fixed or Scrollable Layout Position.</p>
-
-                        <div class="btn-group radio" role="group">
-                            <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-fixed" value="fixed">
-                            <label class="btn btn-light w-sm" for="layout-position-fixed">Fixed</label>
-
-                            <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-scrollable" value="scrollable">
-                            <label class="btn btn-light w-sm ms-0" for="layout-position-scrollable">Scrollable</label>
-                        </div>
-                    </div>
-                    <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Topbar Color</h6>
-                    <p class="text-muted">Choose Light or Dark Topbar Color.</p>
 
                     <div class="row">
                         <div class="col-4">
@@ -1987,7 +1552,7 @@
                                     </span>
                                 </label>
                             </div>
-                            <h5 class="fs-13 text-center mt-2">Light</h5>
+                            <h5 class="fs-13 text-center mt-2">Blanc</h5>
                         </div>
                         <div class="col-4">
                             <div class="form-check card-radio">
@@ -2011,278 +1576,59 @@
                                     </span>
                                 </label>
                             </div>
-                            <h5 class="fs-13 text-center mt-2">Dark</h5>
+                            <h5 class="fs-13 text-center mt-2">Noir</h5>
                         </div>
                     </div>
 
                     <div id="sidebar-size">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Sidebar Size</h6>
-                        <p class="text-muted">Choose a size of Sidebar.</p>
+                        
 
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-default" value="lg">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-size-default">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
+                                   
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Default</h5>
+                              
                             </div>
 
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-compact" value="md">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-size-compact">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
+                                   
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Compact</h5>
+                                
                             </div>
 
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small" value="sm">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-size-small">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1">
-                                                    <span class="d-block p-1 bg-primary-subtle mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
+                                   
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Small (Icon View)</h5>
+                             
                             </div>
 
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small-hover" value="sm-hover">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-size-small-hover">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1">
-                                                    <span class="d-block p-1 bg-primary-subtle mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
+                                   
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">Small Hover View</h5>
+                               
                             </div>
                         </div>
                     </div>
 
                     <div id="sidebar-view">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Sidebar View</h6>
-                        <p class="text-muted">Choose Default or Detached Sidebar view.</p>
+                     
 
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-style" id="sidebar-view-default" value="default">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-view-default">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Default</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-style" id="sidebar-view-detached" value="detached">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-view-detached">
-                                        <span class="d-flex h-100 flex-column">
-                                            <span class="bg-light d-flex p-1 gap-1 align-items-center px-2">
-                                                <span class="d-block p-1 bg-primary-subtle rounded me-1"></span>
-                                                <span class="d-block p-1 pb-0 px-2 bg-primary-subtle ms-auto"></span>
-                                                <span class="d-block p-1 pb-0 px-2 bg-primary-subtle"></span>
-                                            </span>
-                                            <span class="d-flex gap-1 h-100 p-1 px-2">
-                                                <span class="flex-shrink-0">
-                                                    <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    </span>
-                                                </span>
-                                            </span>
-                                            <span class="bg-light d-block p-1 mt-auto px-2"></span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Detached</h5>
-                            </div>
-                        </div>
                     </div>
                     <div id="sidebar-color">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Sidebar Color</h6>
-                        <p class="text-muted">Choose a color of Sidebar.</p>
+                      
 
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient.show">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-light" value="light">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-color-light">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-white border-end d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Light</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient.show">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-dark" value="dark">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="sidebar-color-dark">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-primary d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-white bg-opacity-10 rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Dark</h5>
-                            </div>
-                            <div class="col-4">
-                                <button class="btn btn-link avatar-md w-100 p-0 overflow-hidden border collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient" aria-expanded="false" aria-controls="collapseBgGradient">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-vertical-gradient d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-white bg-opacity-10 rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-white bg-opacity-10"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </button>
-                                <h5 class="fs-13 text-center mt-2">Gradient</h5>
-                            </div>
-                        </div>
-                        <!-- end row -->
+                       
 
                         <div class="collapse" id="collapseBgGradient">
-                            <div class="d-flex gap-2 flex-wrap img-switch p-2 px-3 bg-light rounded">
-
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient" value="gradient">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-2" value="gradient-2">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-2">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-2"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-3" value="gradient-3">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-3">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-3"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-4" value="gradient-4">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-4">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-4"></span>
-                                    </label>
-                                </div>
-                            </div>
+                           
                         </div>
                     </div>
 
@@ -2329,8 +1675,9 @@
                     </div>
 
                     <div id="sidebar-color">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Primary Color</h6>
-                        <p class="text-muted">Choose a color of Primary.</p>
+                       <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Couleur principale</h6>
+                        <p class="text-muted">Choisissez la couleur principale.</p>
+
 
                         <div class="d-flex flex-wrap gap-2">
                             <div class="form-check sidebar-setting card-radio">
@@ -2353,73 +1700,16 @@
                     </div>
 
                     <div id="preloader-menu">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Preloader</h6>
-                        <p class="text-muted">Choose a preloader.</p>
+                       
                     
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-custom" value="enable">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="preloader-view-custom">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                        <!-- <div id="preloader"> -->
-                                        <div id="status" class="d-flex align-items-center justify-content-center">
-                                            <div class="spinner-border text-primary avatar-xxs m-auto" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </div>
-                                        <!-- </div> -->
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Enable</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-none" value="disable">
-                                    <label class="form-check-label p-0 avatar-md w-100 material-shadow" for="preloader-view-none">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Disable</h5>
-                            </div>
-                        </div>
+                       
                     
                     </div>
                     <!-- end preloader-menu -->
 
                     <div id="body-img" style="display: none;">
-                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Background Image</h6>
-                        <p class="text-muted">Choose a body background image.</p>
+                        <h6 class="mt-4 mb-0 fw-semibold text-uppercase">Image de fond</h6>
+                        <p class="text-muted">Choisissez une image de fond pour le corps de la page.</p>
                 
                         <div class="row">
                             <div class="col-4">
@@ -2444,38 +1734,10 @@
                                         </span>
                                     </label>
                                 </div>
-                                <h5 class="fs-13 text-center mt-2">None</h5>
                             </div>
-                            <!-- end col -->
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-body-image" id="body-img-one" value="img-1">
-                                    <label class="form-check-label p-0 avatar-md w-100" data-body-image="img-1" for="body-img-one">
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">One</h5>
-                            </div>
-                            <!-- end col -->
+                           
                 
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-body-image" id="body-img-two" value="img-2">
-                                    <label class="form-check-label p-0 avatar-md w-100" data-body-image="img-2" for="body-img-two">
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Two</h5>
-                            </div>
-                            <!-- end col -->
-                
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-body-image" id="body-img-three" value="img-3">
-                                    <label class="form-check-label p-0 avatar-md w-100" data-body-image="img-3" for="body-img-three">
-                                    </label>
-                                </div>
-                                <h5 class="fs-13 text-center mt-2">Three</h5>
-                            </div>
-                            <!-- end col -->
+                           
                         </div>
                         <!-- end row -->
                     </div>
@@ -2485,13 +1747,11 @@
 
         </div>
         <div class="offcanvas-footer border-top p-3 text-center">
-            <div class="row">
-                <div class="col-6">
-                    <button type="button" class="btn btn-light w-100" id="reset-layout">Reset</button>
+            <div class="row text-center">
+                <div class="col-6 text-center">
+                    <button type="button" class="btn btn-light w-100 text-center" id="reset-layout">Réinitialiser</button>
                 </div>
-                <div class="col-6">
-                    <a href="https://1.envato.market/velzon-admin" target="_blank" class="btn btn-primary w-100">Buy Now</a>
-                </div>
+               
             </div>
         </div>
     </div>
@@ -2519,6 +1779,9 @@
 
     <!-- App js -->
     <script src="assets/js/app.js"></script>
+
+    <!-- TEST JS -->
+     <script src="assets/js/test.js"></script>
 
     <!-- API CDF-->
     <script>

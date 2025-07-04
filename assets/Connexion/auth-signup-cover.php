@@ -1,47 +1,23 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "school";
+    require_once __DIR__ . '/../Controllers/AuthController.php';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+    $auth = new AuthController();
+    $message = "";
 
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $names = $_POST['Names_User'];
+        $email = $_POST['Email'];
+        $password = $_POST['Password_User'];
+        $confirmPassword = $_POST['Confirm_Password'];
+        $role = $_POST['Role_User'];
 
-$message = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $names = $_POST['Names_User'];
-  $email = $_POST['Email'];
-  $password = $_POST['Password_User'];
-  $confirm_password = $_POST['Confirm_Password'];
-
-  $check_sql = "SELECT * FROM Pupil WHERE Names_User = '$names'";
-  $result = $conn->query($check_sql);
-
-if ($result->num_rows > 0) {
-    $message = "<p style='color: red; text-align: center;'>L'utilisateur avec ce nom est déjà enregistré.</p>";
-} elseif ($conn->query("SELECT * FROM Pupil WHERE Email = '$email'")->num_rows > 0) {
-    $message = "<p style='color: red; text-align: center;'>L'adresse email est déjà utilisée. Veuillez en choisir une autre.</p>";
-}elseif ($password !== $confirm_password) {
-    $message = "<p style='color: red; text-align: center;'>Les mots de passe ne correspondent pas. Veuillez confirmer le bon mot de passe.</p>";
-}else{
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-    $sql = "INSERT INTO Pupil (Names_User, Email, Password_User) VALUES ('$names', '$email', '$hashed_password')";
-
-    if ($conn->query($sql) === TRUE) {
-      $message = "<p style='color: green; text-align: center;'>Enregistrement réussi.</p>";
-    } else {
-      $message = "<p style='color: red; text-align: center;'>Erreur: " . $sql . "<br>" . $conn->error . "</p>";
+        $result = $auth->register($names, $email, $password, $confirmPassword, $role);
+        $message = $result['success']
+            ? "<p style='color: green; text-align: center;'>{$result['message']}</p>"
+            : "<p style='color: red; text-align: center;'>{$result['message']}</p>";
     }
-  }
-}
-
-
-$conn->close();
 ?>
+
 
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
@@ -124,6 +100,9 @@ $conn->close();
 
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4">
+                                        <div class="text-center my-3">
+                                            <img src="assets/images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
+                                        </div>
                                         <div>
                                             <h5 class="text-primary">Créer un compte</h5>
                                             <p class="text-muted">Remplissez les informations ci-dessous pour créer un compte.</p>
@@ -159,6 +138,15 @@ $conn->close();
                                                         Veuillez confirmer votre mot de passe.
                                                     </div>
                                                 </div>
+
+                                                <div class="mb-3">
+                                                    <label for="Role_User" class="form-label">Rôle de l'utilisateur <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="Role_User" name="Role_User" required>
+                                                        <option value="parent">Parent</option>
+                                                        <option value="admin">Administrateur</option>
+                                                    </select>
+                                                </div>
+
                                                 <div class="mt-4">
                                                     <button class="btn btn-success w-100" type="submit">Créer un compte</button>
                                                 </div>
@@ -166,7 +154,7 @@ $conn->close();
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                            <p class="mb-0">Vous avez déjà un compte ? <a href="auth-signin-cover.php" class="fw-semibold text-primary text-decoration-underline">Se connecter</a></p>
+                                            <p class="mb-0">Vous avez déjà un compte ? <a href="?search=./assets/Connexion/auth-signin-cover.php" class="fw-semibold text-primary text-decoration-underline">Se connecter</a></p>
                                         </div>
                                     </div>
                                 </div>
@@ -213,6 +201,88 @@ $conn->close();
     <script src="assets/js/pages/form-validation.init.js"></script>
     <!-- password create init -->
     <script src="assets/js/pages/passowrd-create.init.js"></script>
+
+    <!-- SEARCH LOGO -->
+    <script>
+        let a = 0;
+        let masque = document.createElement('div');
+        let logo = document.createElement('img');
+        let cercle = document.createElement('div');
+
+        let angle = 0;
+        let scale = 1;
+        let opacityLogo = 1;
+
+        window.addEventListener('load', () => {
+            a = 1;
+
+            // Le cercle et le logo commencent à bouger immédiatement
+            anime = setInterval(() => {
+                angle += 10; // Vitesse de rotation du cercle
+                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+                // Zoom progressif du logo
+                scale += 0.005;
+                opacityLogo -= 0.005;
+
+                logo.style.transform = `scale(${scale})`;
+                logo.style.opacity = opacityLogo;
+
+            }, 20);
+
+            // Après 1 seconde, on arrête l'animation
+            setTimeout(() => {
+                clearInterval(anime);
+                masque.style.opacity = '0';
+            }, 1000);
+
+            setTimeout(() => {
+                masque.style.visibility = 'hidden';
+            }, 1500);
+        });
+
+        // Création du masque
+        masque.style.width = '100%';
+        masque.style.height = '100vh';
+        masque.style.zIndex = 100000;
+        masque.style.background = '#ffffff';
+        masque.style.position = 'fixed';
+        masque.style.top = '0';
+        masque.style.left = '0';
+        masque.style.opacity = '1';
+        masque.style.transition = '0.5s ease';
+        masque.style.display = 'flex';
+        masque.style.justifyContent = 'center';
+        masque.style.alignItems = 'center';
+        document.body.appendChild(masque);
+
+        // Création du logo
+        logo.setAttribute('src', 'assets/images/logo_pp.png');
+        logo.style.width = '10vh';
+        logo.style.height = '10vh';
+        logo.style.position = 'relative';
+        logo.style.zIndex = '2';
+        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
+        masque.appendChild(logo);
+
+        // Création du cercle autour du logo
+        cercle.style.width = '15vh';
+        cercle.style.height = '15vh';
+        cercle.style.border = '3px solid #e12c4e';
+        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.borderRadius = '50%';
+        cercle.style.position = 'absolute';
+        cercle.style.top = '50%';
+        cercle.style.left = '50%';
+        cercle.style.transform = 'translate(-50%, -50%)';
+        cercle.style.boxSizing = 'border-box';
+        cercle.style.zIndex = '1';
+        masque.appendChild(cercle);
+
+        // Variables de l'animation
+        let anime;
+
+    </script>
 </body>
 
 

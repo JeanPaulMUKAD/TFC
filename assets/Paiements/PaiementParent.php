@@ -1,29 +1,23 @@
 <?php
+    $message = "";  
     require_once __DIR__ . '/../Controllers/AuthController.php';
-
     $auth = new AuthController();
-    $message = "";
 
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
-        $nom_eleve = $_POST['nom_eleve'] ?? '';
-        $classe_eleve = $_POST['classe_eleve'] ?? '';
-        $montant_payer = $_POST['montant_payer'] ?? '';
-        $devise1 = $_POST['devise1'] ?? '';
-        $devise = $_POST['devise'] ?? '';
-        $motif_paiement = $_POST['motif_paiement'] ?? '';
-        $classe_selection = $_POST['classe_selection'] ?? '';
-        $total_annuel = $_POST['total_annuel'] ?? '';
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $response = $auth->handlePaymentAndReport($_POST);
 
-        $result = $auth->processCashPayment($nom_eleve, $classe_eleve, $montant_payer, $devise1, $devise, $motif_paiement, $classe_selection, $total_annuel);
-
-        if ($result['success']) {
-            $message = "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
+        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
+            // Réponse JSON pour AJAX
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit;
         } else {
-            $message = "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
+            // Pour un POST classique (ex: paiement local)
+            $message = $response['message'];
         }
     }
-?>
 
+?>
 
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
@@ -32,7 +26,7 @@
 <head>
 
     <meta charset="utf-8" />
-    <title>Paiement en espèces | Administration C.S.P.P.UNILU</title>
+    <title>Paiement en ligne| Administration C.S.P.P.UNILU</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="Themesbrand" name="author" />
@@ -53,6 +47,69 @@
     <!-- App favicon -->
     <link rel="shortcut icon" href="../images/logo_pp.png">
 
+    <script src="https://cdn.cinetpay.com/seamless/main.js"></script>
+
+    <script>
+        function checkout() {
+            // Champs du formulaire
+            let nomEleve = document.getElementById("nom_eleve").value.trim();
+            let classe = document.getElementById("classe_selection").value;
+            let montant = document.getElementById("montant_payer").value.trim();
+            let devise = document.getElementById("devise").value;
+            let motif = document.getElementById("motif_paiement").value.trim();
+            let errorDiv = document.getElementById("form-error-message");
+            errorDiv.innerHTML = "";
+
+            if (!nomEleve || !classe || !montant || !devise || !motif || parseFloat(montant) <= 0) {
+                errorDiv.innerHTML = "Veuillez remplir tous les champs obligatoires correctement avant de confirmer le paiement.";
+                return;
+            }
+
+            // Génération d’un ID unique pour transaction
+            let transactionId = Math.floor(Math.random() * 100000000).toString();
+            document.getElementById('transaction_id').value = transactionId;
+
+            CinetPay.setConfig({
+                apikey: '75056871567c071de82e830.17896805',
+                site_id: '105899604',
+                notify_url: 'http://localhost:8080/assets/Paiements/PaiementParent.php',
+                mode: 'PRODUCTION'
+            });
+
+            CinetPay.getCheckout({
+                transaction_id: transactionId,
+                amount: parseFloat(montant),
+                currency: devise === '$' ? 'USD' : 'CDF',
+                channels: 'ALL',
+                description: motif,
+                customer_name: nomEleve,
+                customer_email: "eleve@example.com",
+                customer_phone_number: "000000000",
+                customer_address: "Adresse",
+                customer_city: "Lubumbashi",
+                customer_country: "CD",
+                customer_state: "Haut-Katanga",
+                customer_zip_code: "12345"
+            });
+
+            CinetPay.waitResponse(function (data) {
+                if (data.status === "REFUSED") {
+                    alert("Votre paiement a échoué");
+                    window.location.reload();
+                } else if (data.status === "ACCEPTED") {
+                    alert("Votre paiement a été effectué avec succès");
+
+                    document.getElementById('payment_validated').value = "1";
+                    document.getElementById('transaction_id').value = data.transaction_id;
+
+                    document.querySelector("form").submit();
+                }
+            });
+        }
+
+    </script>
+
+
 </head>
 
 <body>
@@ -64,10 +121,7 @@
         <!-- auth-page content -->
         <div class="auth-page-content overflow-hidden pt-lg-5">
             <div class="container">
-                <div class="mb-4">
-                    <a href="../../Dashboad.php" class="text-white text-sm font-medium hover:underline ">&larr; Retour
-                        vers la page analyse</a>
-                </div>
+
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card overflow-hidden m-0 card-bg-fill galaxy-border-none">
@@ -77,8 +131,8 @@
                                         <div class="bg-overlay"></div>
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
-                                                <a href="index.html" class="d-block">
-                                                    <img src="assets/images/logout.png" alt="" height="50">
+                                                <a href="#" class="d-block">
+                                                    <img src="../images/logout.png" alt="" height="50">
                                                 </a>
                                             </div>
                                             <div class="mt-auto">
@@ -123,26 +177,27 @@
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4">
                                         <div class="text-center my-3">
-                                            <img src="../images/logo_pp2.png" alt="Logo"
-                                                style="max-width: 90px; height: auto;">
+                                            <img src="../images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
                                         </div>
+
                                         <div>
-                                            <h5 class="text-primary">Paiement en espèces</h5>
+                                            <h5 class="text-primary">Paiement en lignes</h5>
                                         </div>
                                         <?php echo $message; ?>
+                                        <div id="form-error-message" class="text-danger mb-3 fw-semibold"></div>
                                         <div class="mt-4">
                                             <form class="needs-validation" novalidate method="POST">
-                                                <div class="mb-3">
-                                                    <input type="hidden" name="local_payment" value="1">
 
+                                                <input type="hidden" name="local_payment" value="1">
+                                                <input type="hidden" name="payment_validated" id="payment_validated"
+                                                    value="0">
+                                                <input type="hidden" name="transaction_id" id="transaction_id" value="">
+                                                <div class="mb-3">
                                                     <label for="nom_eleve" class="form-label">Nom complet de l'élève
                                                         <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="nom_eleve"
+                                                    <input type="text" class="form-control text-xl" id="nom_eleve"
                                                         name="nom_eleve" placeholder="Entrez le nom complet de l'élève"
                                                         required>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez entrer le nom complet de l'élève.
-                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -176,45 +231,8 @@
                                                         <option value="4ere MG">4ère MG</option>
                                                         <option value="4ere ELECT">4ère ELECT</option>
                                                         <option value="4eme TCC">4ème TCC</option>
+
                                                     </select>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez sélectionner une classe.
-                                                    </div>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="devise1" class="form-label">Devise <span
-                                                            class="text-danger">*</span></label>
-                                                    <select class="form-control" id="devise1" name="devise1" required>
-                                                        <option value="">Sélectionnez une devise</option>
-                                                        <option value="USD">$ - USD</option>
-                                                        <option value="CDF">Fc - CDF</option>
-                                                    </select>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez sélectionner une devise.
-                                                    </div>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="total_annuel" class="form-label">Total annuel à payer
-                                                        <span class="text-danger">*</span></label>
-                                                    <input type="number" class="form-control" id="total_annuel"
-                                                        name="total_annuel" placeholder="Entrez le total annuel" min="1"
-                                                        required>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez entrer le total annuel à payer.
-                                                    </div>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="classe_eleve" class="form-label">Classe de l'élève <span
-                                                            class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="classe_eleve"
-                                                        name="classe_eleve" placeholder="Entrez la classe de l'élève"
-                                                        required>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez entrer la classe de l'élève.
-                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -223,9 +241,6 @@
                                                     <input type="number" class="form-control" id="montant_payer"
                                                         name="montant_payer" placeholder="Entrez le montant à payer"
                                                         min="1" required>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez entrer le montant à payer.
-                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -236,9 +251,6 @@
                                                         <option value="$">USD</option>
                                                         <option value="Fc">CDF</option>
                                                     </select>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez sélectionner une devise.
-                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -247,16 +259,157 @@
                                                     <input type="text" class="form-control" id="motif_paiement"
                                                         name="motif_paiement" placeholder="Entrez le motif du paiement"
                                                         required>
-                                                    <div class="invalid-feedback">
-                                                        Veuillez entrer le motif du paiement.
-                                                    </div>
+                                                </div>
+                                                <div class="mt-4">
+                                                    <button type="button" onclick="checkout()"
+                                                        class="btn btn-success w-100">Confirmer</button>
                                                 </div>
 
-                                                <div class="mt-4">
-                                                    <button class="btn btn-success w-100"
-                                                        type="submit">Confirmer</button>
-                                                </div>
                                             </form>
+
+                                            <hr class="my-4">
+
+                                            <div class="text-center mb-3">
+                                                <button id="toggleReportForm" class="btn btn-info">Consulter le
+                                                    rapport</button>
+                                            </div>
+
+                                            <div id="reportResults" class="mb-4" style="display:none;">
+                                                <h5>Rapport de paiement</h5>
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Montant payé</th>
+                                                            <th>Motif</th>
+                                                            <th>ID Transaction</th>
+                                                            <th>Statut</th>
+                                                            <th>Classe</th>
+                                                            <th>Total Annuel</th>
+                                                            <th>Reste à payer</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="reportBody">
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div id="reportForm" style="display:none; max-width: 500px; margin: auto;">
+                                                <form id="fetchReportForm" class="needs-validation" novalidate>
+                                                    <div class="mb-3">
+                                                        <label for="nom_eleve_report" class="form-label">Nom complet de
+                                                            l'élève <span class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="nom_eleve_report"
+                                                            name="nom_eleve_report" placeholder="Entrez le nom complet"
+                                                            required>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="classe_report" class="form-label">Classe <span
+                                                                class="text-danger">*</span></label>
+                                                        <select class="form-control" id="classe_report"
+                                                            name="classe_report" required>
+                                                            <option value="">Sélectionnez une classe</option>
+                                                            <option value="7e EB">7e EB</option>
+                                                            <option value="8e EB">8e EB</option>
+                                                            <option value="1ere SC">1ère SC</option>
+                                                            <option value="1ere CG">1ère CG</option>
+                                                            <option value="1ere HP">1ère HP</option>
+                                                            <option value="1ere MG">1ère MG</option>
+                                                            <option value="1ere ELECT">1ère ELECT</option>
+                                                            <option value="2ere SC">2ère SC</option>
+                                                            <option value="2ere CG">2ère CG</option>
+                                                            <option value="2ere HP">2ère HP</option>
+                                                            <option value="2ere MG">2ère MG</option>
+                                                            <option value="2ere ELECT">2ère ELECT</option>
+                                                            <option value="2eme TCC">2ème TCC</option>
+                                                            <option value="3ere SC">3ère SC</option>
+                                                            <option value="3ere CG">3ère CG</option>
+                                                            <option value="3ere HP">3ère HP</option>
+                                                            <option value="3ere MG">3ère MG</option>
+                                                            <option value="3ere ELECT">3ère ELECT</option>
+                                                            <option value="3eme TCC">3ème TCC</option>
+                                                            <option value="4ere SC">4ère SC</option>
+                                                            <option value="4ere CG">4ère CG</option>
+                                                            <option value="4ere HP">4ère HP</option>
+                                                            <option value="4ere MG">4ère MG</option>
+                                                            <option value="4ere ELECT">4ère ELECT</option>
+                                                            <option value="4eme TCC">4ème TCC</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <button type="submit"
+                                                        class="btn btn-primary w-100">Rechercher</button>
+                                                </form>
+                                            </div>
+
+                                            <script>
+                                                document.getElementById('toggleReportForm').addEventListener('click', function () {
+                                                    let form = document.getElementById('reportForm');
+                                                    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+                                                    if (form.style.display === 'none') {
+                                                        document.getElementById('reportResults').style.display = 'none';
+                                                    }
+                                                });
+
+                                                document.getElementById('fetchReportForm').addEventListener('submit', function (e) {
+                                                    e.preventDefault();
+
+                                                    let nomEleve = document.getElementById('nom_eleve_report').value.trim();
+                                                    let classe = document.getElementById('classe_report').value;
+
+                                                    if (!nomEleve || !classe) {
+                                                        alert("Veuillez remplir tous les champs pour la recherche.");
+                                                        return;
+                                                    }
+
+                                                    fetch(window.location.href, {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                        body: new URLSearchParams({
+                                                            action: 'fetch_report',
+                                                            nom_eleve_report: nomEleve,
+                                                            classe_report: classe
+                                                        })
+                                                    })
+                                                        .then(response => response.json())
+                                                        .then(data => {
+                                                            if (data.success) {
+                                                                let tbody = document.getElementById('reportBody');
+                                                                tbody.innerHTML = '';
+
+                                                                if (data.payments.length === 0) {
+                                                                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun paiement trouvé pour cet élève et cette classe.</td></tr>';
+                                                                } else {
+                                                                    data.payments.forEach(p => {
+                                                                        tbody.innerHTML += `
+                                                                        <tr>
+                                                                            <td>${parseFloat(p.montant_payer).toFixed(2)}</td>
+                                                                            <td>${p.motif_paiement}</td>
+                                                                            <td>${p.transaction_id}</td>
+                                                                            <td>${p.payment_status}</td>
+                                                                            <td>${p.classe_eleve}</td>
+                                                                            <td>${parseFloat(p.total_annuel).toFixed(2)}</td>
+                                                                            <td>${parseFloat(p.reste_a_payer).toFixed(2)}</td>
+                                                                            
+                                                                        </tr>
+                                                                    `;
+                                                                    });
+                                                                }
+                                                                document.getElementById('reportResults').style.display = 'block';
+                                                            } else {
+                                                                alert("Erreur lors de la récupération des données.");
+                                                            }
+                                                        })
+                                                        .catch(error => {
+                                                            console.error("Erreur AJAX:", error);
+                                                            alert("Une erreur est survenue lors de la requête.");
+                                                        });
+                                                });
+                                            </script>
+
+
+
                                         </div>
                                     </div>
                                 </div>
@@ -272,6 +425,8 @@
             <!-- end container -->
         </div>
         <!-- end auth page content -->
+
+
 
         <!-- footer -->
         <footer class="footer galaxy-border-none">
@@ -386,6 +541,7 @@
         let anime;
 
     </script>
+
 </body>
 
 
