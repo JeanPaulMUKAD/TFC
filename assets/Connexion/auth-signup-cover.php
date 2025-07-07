@@ -142,8 +142,11 @@
                                                 <div class="mb-3">
                                                     <label for="Role_User" class="form-label">Rôle de l'utilisateur <span class="text-danger">*</span></label>
                                                     <select class="form-control" id="Role_User" name="Role_User" required>
+                                                        <option value="">Sélectionner votre role</option>
                                                         <option value="parent">Parent</option>
-                                                        <option value="admin">Administrateur</option>
+                                                        <option value="prefet">Prefet</option>
+                                                        <option value="sec">Secrétaire</option>
+                                                        <option value="caissier">Caissier</option>
                                                     </select>
                                                 </div>
 

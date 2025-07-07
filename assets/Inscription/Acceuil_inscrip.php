@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secrétariat | C.S.P.P.UNILU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome (version stable gratuite sans compte) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white">
+
+    <!-- Navbar -->
+    <nav
+        class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white text-black shadow-md">
+        <div class="text-2xl font-bold">
+            <span class="text-black">C.S.P.P</span><span class="text-orange-500 font-extrabold">.UNILU</span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <a href="mailto:administrationcsppunilu@gmail.com" target="_blank" class="text-sm font-medium">Aide</a>
+            <a href="#"
+                class="bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white font-semibold py-2 px-4 rounded-full text-sm">
+                Se déconnecter
+            </a>
+        </div>
+    </nav>
+
+
+    <section class="relative px-4 py-10 bg-white pt-28">
+        <div
+            class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-black text-white min-h-[100vh] flex items-center justify-center shadow-2xl">
+            <!-- Dégradés discrets dans les coins -->
+            <div
+                class="absolute top-0 left-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
+            </div>
+            <div
+                class="absolute top-0 right-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
+            </div>
+
+            <!-- Contenu centré -->
+            <div class="relative z-10 max-w-4xl w-full text-center space-y-6 p-8">
+                <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full text-white bg-white/10">
+                    <span class="text-green-700">● </span>ESPACE DU SECRÉTAIRE ACADÉMIQUE
+                </div>
+
+                <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
+                    Bienvenue sur la page du<br>
+                    <span
+                        class="inline-block bg-gradient-to-r from-red-600 to-orange-500 px-2 py-1 rounded-md text-white">Secrétaire</span>
+                </h1>
+
+                <p class="text-lg text-gray-300 mt-2">
+                    Vous êtes chargé de la gestion administrative des élèves et du suivi des inscriptions. <br>
+                    Votre rôle est essentiel dans le bon fonctionnement de l’établissement.
+                </p>
+
+                <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
+                    <a href="../Inscription/inscription.php"
+                        class="bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white font-semibold py-3 px-6 rounded-full text-sm flex items-center gap-2">
+                        <i class="fas fa-user-pen text-white"></i>
+                        <span>Inscrire un élève</span>
+                    </a>
+                    <a href="mailto:administrationcsppunilu@gmail.com"
+                        class="bg-white text-black hover:bg-gray-200 transition font-semibold py-3 px-6 rounded-full flex items-center gap-2 text-sm">
+                        <i class="fas fa-phone text-red-500"></i>
+                        <span>Contacter la direction</span>
+                    </a>
+                </div>
+
+                <!-- Infos du bas -->
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-300">
+                    <div class="flex items-center justify-center space-x-2">
+                        <i class="fas fa-folder text-orange-400"></i>
+                        <span>Gestion des dossiers</span>
+                    </div>
+                    <div class="flex items-center justify-center space-x-2">
+                        <i class="fas fa-user-pen text-orange-400"></i>
+                        <span>Inscriptions des élèves</span>
+                    </div>
+                    <div class="flex items-center justify-center space-x-2">
+                        <i class="fas fa-lock text-orange-400"></i>
+                        <span>Sécurité des données</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="bg-white py-20 px-6">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+            <!-- Contenu texte -->
+            <div>
+                <h2 class="text-4xl font-extrabold text-gray-900 mb-4">
+                    Inscription d’un élève
+                </h2>
+                <p class="text-gray-600 text-lg mb-6">
+                    Grâce à notre plateforme, l’inscription d’un élève devient simple, rapide et entièrement numérique.
+                    Le secrétaire académique peut :
+                </p>
+                <ul class="list-disc pl-5 space-y-3 text-gray-700 text-base">
+                    <li>Enregistrer un nouvel élève avec son nom, sexe et classe.</li>
+                    <li>Générer automatiquement un matricule unique.</li>
+                    <li>Modifier ou supprimer une inscription en un clic.</li>
+                    <li>Garder un historique complet des inscriptions par année scolaire.</li>
+                </ul>
+
+                <div class="mt-8">
+                    <button
+                        class="inline-block bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold py-3 px-6 rounded-full hover:bg-orange-600 transition">
+                        Consulter les informations de l'élève
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Image illustrative -->
+            <div class="flex justify-center">
+                <img src="../images/Eleve.png" alt="Inscription élève" class="rounded-lg ">
+            </div>
+        </div>
+    </section>
+
+
+
+</body>
+
+</html>

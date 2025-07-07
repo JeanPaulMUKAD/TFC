@@ -317,55 +317,11 @@
                                 </ul>
                             </div>
                         </li> <!-- end Dashboard Menu -->
+                    
+
                         
 
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">Pages</span></li>
-
-                        <li class="nav-item">
-                            <a class="nav-link menu-link" href="#sidebarAuth" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
-                                <i class="ri-account-circle-line"></i> <span data-key="t-authentication">Authentication</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarAuth">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="auth-signin-cover.php" class="nav-link"> Se connecter</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="auth-signup-cover.php" class="nav-link"> Créer un compte</a>
-                                        
-                                    </li>
-
-                                    <li class="nav-item">
-                                        <a href="auth-pass-reset-cover.php" class="nav-link">Mot de passe oublié</a>
-                                        
-                                    </li>
-
-                                    <li class="nav-item">
-                                        <a href="auth-logout-cover.php" class="nav-link"> Deconnexion</a>
-                                        
-                                    </li>
-                                   
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-comptes">Comptes</span></li>
-
-                        <li class="nav-item">
-                            <a class="nav-link menu-link" href="#sidebarCompte" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCompte">
-                                <i class="ri-user-line"></i> <span data-key="t-comptes">Gestion des comptes</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarCompte">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="./assets/Comptes/AddParent.php" class="nav-link">Gérer les Parents</a>
-                                    </li>
-                                    
-                                </ul>
-                            </div>
-                        </li>
-
+                       
                     </ul>
                 </div>
                 <!-- Sidebar -->
@@ -435,11 +391,11 @@
                                                     </h4>
                                                     <ul>
                                                         <?php
-                                                        if (isset($_SESSION['username']) && $_SESSION['username']) {
-                                                            echo "<li>" . htmlspecialchars($_SESSION['username']) . "</li>";
-                                                        } else {
-                                                            echo "<li>Aucun utilisateur connecté</li>";
-                                                        }
+                                                            if (isset($_SESSION['username'])) {
+                                                                echo "<li>" . htmlspecialchars($_SESSION['username']) . "</li>";
+                                                            } else {
+                                                                echo "<li>Aucun utilisateur connecté</li>";
+                                                            }
                                                         ?>
                                                     </ul>
                                                 </div>
@@ -610,7 +566,7 @@
                                                                 die('Erreur de connexion (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
                                                             }
                                                             // Requête pour compter les élèves selon leur nom
-                                                            $query = "SELECT COUNT(nom_eleve) as total FROM eleve"; // ON COMPTE LES NOMS
+                                                            $query = "SELECT COUNT(nom_eleve) as total FROM paiement"; // ON COMPTE LES NOMS
 
                                                             $result = $mysqli->query($query);
 
@@ -695,7 +651,7 @@
                                                     }
 
                                                     // Requête pour récupérer les montants de paiement
-                                                    $result = $mysqli->query("SELECT montant_payer, date_paiement FROM eleve");
+                                                    $result = $mysqli->query("SELECT montant_payer, date_paiement FROM paiement");
 
                                                     $series = [];
                                                     $months = [];
@@ -788,7 +744,7 @@
                                                     SELECT classe_eleve, 
                                                         COUNT(CASE WHEN montant_payer > 0 THEN 1 END) AS payes, 
                                                         COUNT(*) AS total
-                                                    FROM eleve
+                                                    FROM paiement
                                                     GROUP BY classe_eleve
                                                 ");
 
@@ -875,7 +831,7 @@
                                                 }
 
                                                 // Charger toutes les données
-                                                $result = $mysqli->query("SELECT id, nom_eleve, classe_eleve, montant_payer, motif_paiement, date_paiement, payment_status FROM eleve");
+                                                $result = $mysqli->query("SELECT id, nom_eleve, classe_eleve, montant_payer, motif_paiement, date_paiement, payment_status FROM paiement");
 
                                                 $mois_fr = [
                                                     '01' => 'Janvier',
