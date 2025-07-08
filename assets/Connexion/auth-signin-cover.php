@@ -97,7 +97,7 @@
                                             <img src="assets/images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
                                         </div>
                                         <div>
-                                            <h5 class="text-primary">Bienvenue !</h5>
+                                            <h5 class="text-primary text-center">Bienvenue !</h5>
                                             <p class="text-muted">Connectez-vous pour continuer.</p>
                                         </div>
 
@@ -112,9 +112,7 @@
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <div class="float-end">
-                                                        <a href="auth-pass-reset-cover.php" class="text-muted">Mot de passe oublié ?</a>
-                                                    </div>
+                                                    
                                                     <label class="form-label" for="Password_User">Mot de passe</label>
                                                     <div class="position-relative auth-pass-inputgroup mb-3">
                                                         <input type="password" class="form-control pe-5 password-input" placeholder="Entrez votre mot de passe" id="Password_User" name="Password_User" required>
@@ -131,21 +129,13 @@
                                                     <button class="btn btn-success w-100" type="submit">Se connecter</button>
                                                 </div>
 
-                                                <div class="mt-4 text-center">
-                                                    <div class="signin-other-title">
-                                                        <h5 class="fs-13 mb-4 title">Se connecter avec</h5>
-                                                    </div>
-
-                                                    <div>
-                                                        <button type="button" class="btn btn-primary btn-icon waves-effect waves-light"><i class="ri-mail-fill fs-16"></i></button>
-                                                    </div>
-                                                </div>
+                                               
 
                                             </form>
                                         </div>
 
                                         <div class="mt-5 text-center">
-                                            <p class="mb-0">Pas encore de compte ? <a href="?search=./assets/Connexion/auth-signup-cover.php" class="fw-semibold text-primary text-decoration-underline">Créer un compte</a> </p>
+                                            <p class="mb-0">Pas encore de compte ? <a href="mailto:administrationcsppunilu@gmail.com" class="fw-semibold text-primary text-decoration-underline">écrire à l'administration de l'école.</a> </p>
                                         </div>
                                     </div>
                                 </div>

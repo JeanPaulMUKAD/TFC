@@ -38,7 +38,9 @@ class AuthController
 
                 } elseif ($row['Role_User'] === 'sec') {
                     header("Location: ./assets/Inscription/Acceuil_inscrip.php");
-                } else {
+                }elseif ($row['Role_User'] === 'Admin') {
+                    header("Location: ./assets/Comptes/Acceuil_Admin.php");
+                }else {
                     header("Location: ./auth-signin-cover.php");
                 }
                 exit;
