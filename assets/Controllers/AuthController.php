@@ -400,24 +400,66 @@ class AuthController
     }
 
     //PAIEMENT EN PRESENTIEL
-    public function processCashPayment($nom_eleve, $classe_eleve, $montant_payer, $devise1, $devise, $motif_paiement, $classe_selection, $total_annuel)
-    {
+    public function processCashPayment(
+        $matricule,
+        $nom_eleve,
+        $postnom_eleve,
+        $prenom_eleve,
+        $sexe_eleve,
+        $classe_eleve, // On utilise uniquement ce champ maintenant
+        $montant_payer,
+        $devise1,
+        $devise,
+        $motif_paiement,
+        $total_annuel
+    ) {
         $transaction_id = uniqid();
-
-        // Ajouter la devise au montant et total annuel
         $montant_payer_str = $montant_payer . $devise;
         $total_annuel_str = $total_annuel . $devise1;
 
-        $stmt = $this->conn->prepare("INSERT INTO paiement (nom_eleve, classe_eleve, montant_payer, motif_paiement, transaction_id, payment_status, classe_selection, total_annuel) 
-                                    VALUES (?, ?, ?, ?, ?, 'success', ?, ?)");
-        $stmt->bind_param("sssssss", $nom_eleve, $classe_eleve, $montant_payer_str, $motif_paiement, $transaction_id, $classe_selection, $total_annuel_str);
+        $stmt = $this->conn->prepare("INSERT INTO paiement 
+                                (matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, 
+                                 classe_eleve, montant_payer, motif_paiement, transaction_id, 
+                                 payment_status, total_annuel) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'success', ?)");
+
+        $stmt->bind_param(
+            "ssssssssss",
+            $matricule,
+            $nom_eleve,
+            $postnom_eleve,
+            $prenom_eleve,
+            $sexe_eleve,
+            $classe_eleve,
+            $montant_payer_str,
+            $motif_paiement,
+            $transaction_id,
+            $total_annuel_str
+        );
 
         if ($stmt->execute()) {
-            return ['success' => true, 'message' => "Le paiement de l'élève $nom_eleve s'est effectué avec succès."];
+            return ['success' => true, 'message' => "Paiement enregistré avec succès"];
         } else {
             return ['success' => false, 'message' => "Erreur: " . $stmt->error];
         }
     }
+    public function rechercherEleveParMatricule($matricule)
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM inscriptions WHERE matricule = ?");
+        $stmt->bind_param("s", $matricule);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $eleve = $result->fetch_assoc();
+            return ['success' => true, 'eleve' => $eleve];
+        } else {
+            return ['success' => false, 'message' => "Aucun élève trouvé avec ce matricule"];
+        }
+    }
+
+
+
 
     //DASHBOARD
     public function getDashboardStatistics()
@@ -562,18 +604,72 @@ class AuthController
         }
     }
 
+    //Caissier_Rapport(Inscription)
 
+    public function obtenirInfosEleveParMatricule($matricule)
+    {
+        // Vérifie si la connexion est bien établie
+        if (!$this->conn) {
+            return ['success' => false, 'message' => 'Connexion à la base de données non disponible.'];
+        }
 
+        $conn = $this->conn;
 
+        $stmt = $conn->prepare("SELECT * FROM inscriptions WHERE matricule = ?");
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Erreur de préparation de la requête : ' . $conn->error];
+        }
 
+        $stmt->bind_param("s", $matricule);
+        if (!$stmt->execute()) {
+            return ['success' => false, 'message' => 'Erreur lors de l\'exécution : ' . $stmt->error];
+        }
 
+        $result = $stmt->get_result();
+        if (!$result) {
+            return ['success' => false, 'message' => 'Erreur lors de la récupération du résultat : ' . $stmt->error];
+        }
 
+        if ($eleve = $result->fetch_assoc()) {
+            return ['success' => true, 'eleve' => $eleve];
+        } else {
+            return ['success' => false, 'message' => "Aucun élève trouvé avec ce matricule."];
+        }
+    }
 
+    public function obtenirPaiementsParMatricule($matricule) {
+        // Valider le matricule
+        if (empty($matricule)) {
+            return ['success' => false, 'message' => 'Le matricule est requis'];
+        }
+
+        $stmt = $this->conn->prepare("SELECT * FROM paiement WHERE matricule = ? ORDER BY date_paiement DESC");
+        $stmt->bind_param("s", $matricule);
+        
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            $paiements = $result->fetch_all(MYSQLI_ASSOC);
+            
+            return ['success' => true, 'paiements' => $paiements];
+        } else {
+            return ['success' => false, 'message' => 'Erreur de base de données'];
+        }
+    }
 
 
     public function __destruct()
     {
         $this->conn->close();
     }
+}
+
+// Gestion des requêtes AJAX
+if (isset($_GET['action']) && $_GET['action'] == 'rechercherEleve') {
+    $auth = new AuthController();
+    $matricule = $_GET['matricule'] ?? '';
+    $result = $auth->rechercherEleveParMatricule($matricule);
+    header('Content-Type: application/json');
+    echo json_encode($result);
+    exit;
 }
 ?>

@@ -260,7 +260,7 @@
                                             <div id="form_modifier" style="display: none;">
                                                 <form method="POST">
                                                     <input type="hidden" name="modifier_eleve" value="1">
-                                                    <div class="mb-3"><label>Matricule actuel</label><input type="text"
+                                                    <div class="mb-3"><label>Matricule </label><input type="text"
                                                             name="matricule_original" class="form-control" placeholder="Veillez entrer l'ancien matricule" required>
                                                     </div>
                                                     <!-- mêmes champs que l’inscription -->
@@ -278,7 +278,7 @@
                                                         </select>
                                                     </div>
                                                     <div class="mb-3"><label>Classe</label>
-                                                        <select name="classe_selection" class="form-control" required>
+                                                        <select class="form-control" id="classe_selection" name="classe_selection" required>
                                                             <option value="">Choisir classe</option>
                                                             <option value="7e EB">7e EB</option>
                                                             <option value="8e EB">8e EB</option>

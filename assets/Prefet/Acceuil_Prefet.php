@@ -1,3 +1,23 @@
+<?php
+require_once '../Controllers/AuthController.php';
+$auth = new AuthController();
+$messageErreur = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  header('Content-Type: application/json');
+  $matricule = htmlspecialchars(trim($_POST['matricule']));
+
+  if (isset($_POST['action']) && $_POST['action'] === 'get_paiements') {
+    $resultat = $auth->obtenirPaiementsParMatricule($matricule);
+  } else {
+    $resultat = $auth->obtenirInfosEleveParMatricule($matricule);
+  }
+
+  echo json_encode($resultat);
+  exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -7,8 +27,8 @@
   <title>Espace Préfet | C.S.P.P.UNILU</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
     body {
       font-family: 'Poppins', sans-serif;
     }
@@ -33,7 +53,8 @@
 
   <!-- Section Préfet -->
   <section class="relative px-4 py-10 bg-white pt-28">
-    <div class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-gray-900 text-white min-h-[90vh] flex items-center justify-center shadow-2xl">
+    <div
+      class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-gray-900 text-white min-h-[90vh] flex items-center justify-center shadow-2xl">
 
       <!-- Dégradés -->
       <div class="absolute top-0 left-0 w-64 h-64 bg-green-800 rounded-full opacity-20 blur-3xl"></div>
@@ -49,24 +70,64 @@
 
         <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
           Bienvenue dans votre interface<br>
-          <span class="inline-block bg-gradient-to-r from-green-600 to-emerald-500 px-2 py-1 rounded-md text-white">Préfet</span>
+          <span
+            class="inline-block bg-gradient-to-r from-green-600 to-emerald-500 px-2 py-1 rounded-md text-white">Préfet</span>
         </h1>
 
         <p class="text-lg text-gray-300 mt-2">
-          Depuis cet espace, vous pouvez consulter les rapports détaillés des paiements <br> et la liste complète des élèves inscrits dans l’établissement.
+          Depuis cet espace, vous pouvez consulter les rapports détaillés des paiements <br> et la liste complète des
+          élèves inscrits dans l'établissement.
         </p>
 
         <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-          <a href="#"
+          <button id="reportButton"
             class="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-emerald-600 hover:to-green-500 text-white font-semibold py-3 px-6 rounded-full text-sm flex items-center gap-2">
             <i class="fas fa-chart-bar text-white"></i>
             <span>Voir rapports de paiements</span>
-          </a>
-          <a href="#"
+          </button>
+          <button id="studentButton"
             class="bg-white text-black hover:bg-gray-200 transition font-semibold py-3 px-6 rounded-full flex items-center gap-2 text-sm">
             <i class="fas fa-users text-green-600"></i>
-            <span>Liste des élèves inscrits</span>
-          </a>
+            <span>Rechercher un élève</span>
+          </button>
+        </div>
+
+        <!-- Formulaire pour les rapports de paiements -->
+        <div id="reportForm" class="hidden mt-8 bg-white/10 p-6 rounded-xl backdrop-blur-sm">
+          <form id="reportSearchForm" class="space-y-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+              <div class="w-full md:w-auto">
+                <label for="reportMatricule" class="block text-sm font-medium text-white mb-1">Matricule</label>
+                <input type="text" id="reportMatricule" name="reportMatricule" required
+                  class="w-full px-4 py-2 border font-normal border-gray-300 rounded-lg text-black"
+                  placeholder="Entrez le matricule">
+              </div>
+              <button type="submit"
+                class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 h-10 mt-5 md:mt-0">
+                <i class="fas fa-search mr-2"></i> Chercher
+              </button>
+            </div>
+          </form>
+          <div id="paiementsResult" class="mt-6"></div>
+        </div>
+
+        <!-- Formulaire de recherche d'élève -->
+        <div id="matriculeForm" class="hidden mt-8 bg-white/10 p-6 rounded-xl backdrop-blur-sm">
+          <form id="studentSearchForm" class="space-y-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+              <div class="w-full md:w-auto">
+                <label for="matricule" class="block text-sm font-medium text-white mb-1">Matricule</label>
+                <input type="text" id="matricule" name="matricule" required
+                  class="w-full px-4 py-2 border font-normal border-gray-300 rounded-lg text-black"
+                  placeholder="Entrez le matricule">
+              </div>
+              <button type="submit"
+                class="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-emerald-600 hover:to-green-500 text-white font-medium py-2 px-6 rounded-lg transition duration-200 h-10 mt-5 md:mt-0">
+                <i class="fas fa-search mr-2"></i> Rechercher
+              </button>
+            </div>
+          </form>
+          <div id="result" class="mt-6"></div>
         </div>
 
         <!-- Infos -->
@@ -102,24 +163,283 @@
         <ul class="list-disc pl-5 space-y-3 text-gray-700 text-base">
           <li>La lecture des rapports de paiement par élève ou par classe.</li>
           <li>Le suivi global des transactions et alertes de retard.</li>
-          <li>L’accès à la liste actualisée des élèves inscrits.</li>
+          <li>L'accès à la liste actualisée des élèves inscrits.</li>
           <li>Un affichage clair pour faciliter les décisions de gestion.</li>
         </ul>
-
-        <div class="mt-8">
-          <a href="#"
-            class="inline-block bg-gradient-to-r from-green-600 to-emerald-500 text-white font-semibold py-3 px-6 rounded-full hover:from-emerald-600 hover:to-green-600 transition">
-            Accéder aux rapports
-          </a>
-        </div>
       </div>
 
       <!-- Image -->
       <div class="flex justify-center">
-        <img src="../images/Eleve.png" alt="Suivi des paiements" class="rounded-lg ">
+        <img src="../images/Eleve.png" alt="Suivi des paiements" class="rounded-lg">
       </div>
     </div>
   </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Références aux éléments
+      const reportButton = document.getElementById('reportButton');
+      const studentButton = document.getElementById('studentButton');
+      const reportForm = document.getElementById('reportForm');
+      const studentForm = document.getElementById('matriculeForm');
+      const reportSearchForm = document.getElementById('reportSearchForm');
+      const studentSearchForm = document.getElementById('studentSearchForm');
+
+      // Initialisation - cacher les formulaires
+      reportForm.classList.add('hidden');
+      studentForm.classList.add('hidden');
+
+      // Gestion du bouton Rapport
+      reportButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        reportForm.classList.toggle('hidden');
+        if (!studentForm.classList.contains('hidden')) {
+          studentForm.classList.add('hidden');
+        }
+        document.getElementById('result').innerHTML = '';
+      });
+
+      // Gestion du bouton Élève
+      studentButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        studentForm.classList.toggle('hidden');
+        if (!reportForm.classList.contains('hidden')) {
+          reportForm.classList.add('hidden');
+        }
+        document.getElementById('paiementsResult').innerHTML = '';
+      });
+
+      // Soumission du formulaire de rapport
+      reportSearchForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const matricule = document.getElementById('reportMatricule').value;
+        fetchPaiements(matricule);
+      });
+
+      // Soumission du formulaire élève
+      studentSearchForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const matricule = document.getElementById('matricule').value;
+        fetchEleve(matricule);
+      });
+    });
+
+    async function fetchPaiements(matricule) {
+      const resultDiv = document.getElementById('paiementsResult');
+      resultDiv.innerHTML = `
+        <div class="flex justify-center items-center py-8">
+          <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+          <span class="ml-3 text-white">Chargement des paiements...</span>
+        </div>
+      `;
+
+      try {
+        const formData = new FormData();
+        formData.append('matricule', matricule);
+        formData.append('action', 'get_paiements');
+
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.paiements && data.paiements.length > 0) {
+          resultDiv.innerHTML = createPaiementsTable(data.paiements);
+
+          // Ajouter le bouton PDF
+          resultDiv.innerHTML += `
+            <div class="mt-4 flex justify-end">
+              <button onclick="exportToPDF('${matricule}')"
+                      class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2">
+                <i class="fas fa-file-pdf mr-2"></i> Exporter en PDF
+              </button>
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+              <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                <p class="text-yellow-700">${data.message || "Aucun paiement trouvé pour ce matricule"}</p>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <div class="flex items-center">
+              <i class="fas fa-times-circle text-red-500 mr-3"></i>
+              <p class="text-red-700">Erreur lors de la récupération des données</p>
+            </div>
+          </div>
+        `;
+        console.error("Erreur:", error);
+      }
+    }
+
+    async function fetchEleve(matricule) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `
+        <div class="flex justify-center items-center py-8">
+          <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-500"></div>
+          <span class="ml-3 text-white">Recherche en cours...</span>
+        </div>
+      `;
+
+      try {
+        const formData = new FormData();
+        formData.append('matricule', matricule);
+
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          const eleve = data.eleve;
+          resultDiv.innerHTML = createStudentTable(eleve);
+        } else {
+          resultDiv.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+              <div class="flex items-center">
+                <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                <p class="text-red-700">${data.message || "Erreur lors de la recherche"}</p>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <div class="flex items-center">
+              <i class="fas fa-times-circle text-red-500 mr-3"></i>
+              <p class="text-red-700">Erreur de connexion au serveur</p>
+            </div>
+          </div>
+        `;
+        console.error("Erreur:", error);
+      }
+    }
+
+
+
+    function createPaiementsTable(paiements) {
+      const total = paiements.reduce((sum, p) => {
+        return sum + parseFloat(p.montant_payer.replace(/[^0-9.]/g, ''));
+      }, 0);
+
+      return `
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-500">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-white">Historique des paiements</h3>
+          <span class="bg-white text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+            Total: ${total.toFixed(2)} ${paiements[0]?.devise || ''}
+          </span>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Post-Nom</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+              ${paiements.map(p => `
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.nom_eleve}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.postnom_eleve}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.prenom_eleve}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.date_paiement}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.montant_payer}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.motif_paiement}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.classe_eleve}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs rounded-full ${p.payment_status === 'success'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                    }">
+                      ${p.payment_status === 'success' ? 'Payé' : 'Échoué'}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+    }
+
+    function createStudentTable(eleve) {
+      return `
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div class="px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-500">
+            <h3 class="text-lg font-semibold text-white">Informations de l'élève</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Matricule</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Postnom</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${eleve.matricule}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.nom_eleve}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.postnom_eleve}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.prenom_eleve}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.classe_selection}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function exportToPDF(matricule) {
+      alert("Export PDF pour le matricule: " + matricule + "\nCette fonctionnalité sera implémentée prochainement.");
+    }
+  </script>
 
 </body>
 

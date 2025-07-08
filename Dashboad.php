@@ -311,7 +311,7 @@
                                         <a href="./assets/Paiements/Paiement.php" class="nav-link" data-key="t-ecommerce"> Paiement </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="./assets/Paiements/historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Historiques </a>
+                                        <a href="./assets/Paiements/historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Rapports </a>
                                     </li>
                                    
                                 </ul>

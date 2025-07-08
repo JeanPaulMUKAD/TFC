@@ -1,3 +1,21 @@
+ <?php
+    require_once '../Controllers/AuthController.php';
+    $auth = new AuthController();
+    $eleveData = null;
+    $messageErreur = null;
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['matricule'])) {
+        header('Content-Type: application/json');
+        
+        $matricule = htmlspecialchars(trim($_POST['matricule']));
+        $resultat = $auth->obtenirInfosEleveParMatricule($matricule);
+        
+        echo json_encode($resultat);
+        exit;
+    }
+?>
+
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -122,12 +140,31 @@
                     <li>Garder un historique complet des inscriptions par année scolaire.</li>
                 </ul>
 
-                <div class="mt-8">
-                    <button
+                <div class="mt-8 text-left">
+                    <button onclick="toggleForm()"
                         class="inline-block bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold py-3 px-6 rounded-full hover:bg-orange-600 transition">
                         Consulter les informations de l'élève
                     </button>
+
+                    <div id="matriculeForm" class="hidden">
+                        <form onsubmit="fetchEleve(event)" class="space-y-4">
+                            <div>
+                                <label for="matricule"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
+                                <input type="text" id="matricule" name="matricule" required
+                                    class="w-full px-4 py-2 border font-normal border-black rounded-lg text-black">
+                            </div>
+                            <button type="submit"
+                                class="inline-block bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                Rechercher
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Zone d’affichage du résultat -->
+                    <div id="result" class="mt-6"></div>
                 </div>
+
 
             </div>
 
@@ -137,6 +174,76 @@
             </div>
         </div>
     </section>
+
+    <script>
+        function toggleForm() {
+            const form = document.getElementById('matriculeForm');
+            form.classList.toggle('hidden');
+        }
+
+        async function fetchEleve(e) {
+            e.preventDefault();
+            const matricule = document.getElementById('matricule').value;
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.innerHTML = "<p class='text-gray-500'>Recherche en cours...</p>";
+
+            try {
+                // Création des données à envoyer
+                const formData = new FormData();
+                formData.append('matricule', matricule);
+
+                // Envoi de la requête POST
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const eleve = data.eleve;
+
+                    resultDiv.innerHTML = `
+                        <div class="overflow-x-auto mt-4">
+                            <table class="min-w-full text-sm text-left border border-gray-200 rounded-lg">
+                                <thead class="bg-gray-100 text-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-2">Matricule</th>
+                                        <th class="px-4 py-2">Nom</th>
+                                        <th class="px-4 py-2">Postnom</th>
+                                        <th class="px-4 py-2">Prénom</th>
+                                        <th class="px-4 py-2">Sexe</th>
+                                        <th class="px-4 py-2">Classe</th>
+                                        <th class="px-4 py-2">Année</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white text-black">
+                                    <tr class="border-t">
+                                        <td class="px-4 py-2">${eleve.matricule}</td>
+                                        <td class="px-4 py-2">${eleve.nom_eleve}</td>
+                                        <td class="px-4 py-2">${eleve.postnom_eleve}</td>
+                                        <td class="px-4 py-2">${eleve.prenom_eleve}</td>
+                                        <td class="px-4 py-2">${eleve.sexe_eleve}</td>
+                                        <td class="px-4 py-2">${eleve.classe_selection}</td>
+                                        <td class="px-4 py-2">${eleve.annee_inscription}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="text-red-500 font-semibold">${data.message}</p>`;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-500 font-semibold">Erreur lors de la requête: ${error.message}</p>`;
+            }
+
+            return false;
+        }
+    </script>
+
 
 
 
