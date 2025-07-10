@@ -1,3 +1,21 @@
+<?php
+    require_once '../Controllers/AuthController.php';
+    $auth = new AuthController();
+    $messageErreur = null;
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
+        $matricule = htmlspecialchars(trim($_POST['matricule']));
+
+        if (isset($_POST['action']) && $_POST['action'] === 'get_paiements') {
+            $resultat = $auth->obtenirPaiementsParMatricule($matricule);
+        }
+
+        echo json_encode($resultat);
+        exit;
+    }
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -112,12 +130,32 @@
                 </ul>
 
                 <div class="mt-8">
-                    <a href="../Rapports/rapport-paiements.php"
-                        class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold py-3 px-6 rounded-full hover:from-indigo-600 hover:to-blue-600 transition">
-                        Consulter le rapport des paiements
-                    </a>
+                    <button id="reportButton"class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold py-3 px-6 rounded-full hover:from-indigo-600 hover:to-blue-600 transition">
+                        <i class="fas fa-chart-bar text-white"></i>
+                        <span>Voir rapports de paiements</span>
+                    </button>
+                </div>
+                <!-- Formulaire pour les rapports de paiements -->
+                <div id="reportForm" class="hidden mt-8 bg-white/10 p-6 rounded-xl backdrop-blur-sm">
+                    <form id="reportSearchForm" class="space-y-4">
+                        <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+                        <div class="w-full md:w-auto">
+                            <label for="reportMatricule" class="block text-sm font-medium text-white mb-1">Matricule</label>
+                            <input type="text" id="reportMatricule" name="reportMatricule" required
+                            class="w-full px-4 py-2 border font-normal border-gray-300 rounded-lg text-black"
+                            placeholder="Entrez le matricule">
+                        </div>
+                        <button type="submit"
+                            class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 h-10 mt-5 md:mt-0">
+                            <i class="fas fa-search mr-2"></i> Chercher
+                        </button>
+                        </div>
+                    </form>
+                    <div id="paiementsResult" class="mt-6"></div>
                 </div>
             </div>
+
+            
 
             <!-- Image -->
             <div class="flex justify-center">
@@ -125,6 +163,169 @@
             </div>
         </div>
     </section>
+
+    <script>
+        // Afficher/Masquer le formulaire des rapports
+        document.getElementById('reportButton').addEventListener('click', function () {
+            const form = document.getElementById('reportForm');
+            form.classList.toggle('hidden');
+        });
+
+        // Traitement du formulaire des rapports de paiements
+        document.getElementById('reportSearchForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const matricule = document.getElementById('reportMatricule').value;
+            const resultDiv = document.getElementById('paiementsResult');
+
+            resultDiv.innerHTML = `<p class="text-gray-500">Recherche en cours...</p>`;
+
+            try {
+                const response = await fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `matricule=${encodeURIComponent(matricule)}&action=get_paiements`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let rows = '';
+                    data.paiements.forEach(paiement => {
+                        rows += `
+                            <tr class="border-b">
+                                <td class="px-4 py-2">${paiement.nom_eleve}</td>
+                                <td class="px-4 py-2">${paiement.postnom_eleve}</td>
+                                <td class="px-4 py-2">${paiement.prenom_eleve}</td>
+                                <td class="px-4 py-2">${paiement.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}</td>
+                                <td class="px-4 py-2">${paiement.date_paiement}</td>
+                                <td class="px-4 py-2">${paiement.montant_payer}</td>
+                                <td class="px-4 py-2">${paiement.motif_paiement}</td>
+                                <td class="px-4 py-2">${paiement.classe_eleve}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs rounded-full ${paiement.payment_status === 'success'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                    }">
+                                    ${paiement.payment_status === 'success' ? 'Payé' : 'Échoué'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    resultDiv.innerHTML = `
+                        <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg mt-4">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Post-Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white text-black">
+                                ${rows}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="text-red-500 font-semibold">${data.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-500 font-semibold">Erreur lors de la requête.</p>`;
+            }
+        });
+    </script>
+
+     <!-- SEARCH LOGO -->
+    <script>
+        let a = 0;
+        let masque = document.createElement('div');
+        let logo = document.createElement('img');
+        let cercle = document.createElement('div');
+
+        let angle = 0;
+        let scale = 1;
+        let opacityLogo = 1;
+
+        window.addEventListener('load', () => {
+            a = 1;
+
+            // Le cercle et le logo commencent à bouger immédiatement
+            anime = setInterval(() => {
+                angle += 10; // Vitesse de rotation du cercle
+                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+                // Zoom progressif du logo
+                scale += 0.005;
+                opacityLogo -= 0.005;
+
+                logo.style.transform = `scale(${scale})`;
+                logo.style.opacity = opacityLogo;
+
+            }, 20);
+
+            // Après 1 seconde, on arrête l'animation
+            setTimeout(() => {
+                clearInterval(anime);
+                masque.style.opacity = '0';
+            }, 1000);
+
+            setTimeout(() => {
+                masque.style.visibility = 'hidden';
+            }, 1500);
+        });
+
+        // Création du masque
+        masque.style.width = '100%';
+        masque.style.height = '100vh';
+        masque.style.zIndex = 100000;
+        masque.style.background = '#ffffff';
+        masque.style.position = 'fixed';
+        masque.style.top = '0';
+        masque.style.left = '0';
+        masque.style.opacity = '1';
+        masque.style.transition = '0.5s ease';
+        masque.style.display = 'flex';
+        masque.style.justifyContent = 'center';
+        masque.style.alignItems = 'center';
+        document.body.appendChild(masque);
+
+        // Création du logo
+        logo.setAttribute('src', '../images/logo_pp.png');
+        logo.style.width = '10vh';
+        logo.style.height = '10vh';
+        logo.style.position = 'relative';
+        logo.style.zIndex = '2';
+        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
+        masque.appendChild(logo);
+
+        // Création du cercle autour du logo
+        cercle.style.width = '15vh';
+        cercle.style.height = '15vh';
+        cercle.style.border = '3px solid #2563eb';
+        cercle.style.borderTop = '3px solid #000000';
+        cercle.style.borderRadius = '50%';
+        cercle.style.position = 'absolute';
+        cercle.style.top = '50%';
+        cercle.style.left = '50%';
+        cercle.style.transform = 'translate(-50%, -50%)';
+        cercle.style.boxSizing = 'border-box';
+        cercle.style.zIndex = '1';
+        masque.appendChild(cercle);
+
+        // Variables de l'animation
+        let anime;
+
+    </script>
+
 
 </body>
 

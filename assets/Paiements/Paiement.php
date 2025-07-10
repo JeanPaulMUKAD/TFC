@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
         $_POST['postnom_eleve'] ?? '',
         $_POST['prenom_eleve'] ?? '',
         $_POST['sexe_eleve'] ?? 'M',
-        $_POST['classe_eleve'] ?? '', // Utilisez maintenant classe_eleve
+        $_POST['classe_eleve'] ?? '',
         $_POST['montant_payer'] ?? '',
         $_POST['devise1'] ?? '',
         $_POST['devise'] ?? '',
@@ -326,7 +326,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
                         <div class="text-center">
                             <p class="mb-0">&copy;
                                 <script>document.write(new Date().getFullYear())</script> Administration <i
-                                    class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                    class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>
@@ -416,8 +416,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
         // Création du cercle autour du logo
         cercle.style.width = '15vh';
         cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.border = '3px solid #0ab39c';
+        cercle.style.borderTop = '3px solid #405189';
         cercle.style.borderRadius = '50%';
         cercle.style.position = 'absolute';
         cercle.style.top = '50%';
@@ -435,26 +435,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
         function chercherEleveParMatricule(matricule) {
             if (!matricule) return;
 
+            // Afficher un indicateur de chargement
+            const nomField = document.getElementById('nom_eleve');
+            nomField.value = "Recherche en cours...";
+
             fetch(`../Controllers/AuthController.php?action=rechercherEleve&matricule=${encodeURIComponent(matricule)}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
-                        // Remplissage automatique des champs
+                        // Remplissage des champs
                         document.getElementById('nom_eleve').value = data.eleve.nom_eleve || '';
                         document.getElementById('postnom_eleve').value = data.eleve.postnom_eleve || '';
                         document.getElementById('prenom_eleve').value = data.eleve.prenom_eleve || '';
                         document.getElementById('sexe_eleve').value = data.eleve.sexe_eleve || 'M';
-                        document.getElementById('classe_selection').value = data.eleve.classe_selection || '';
-
-                        // Focus sur le prochain champ à remplir
-                        document.getElementById('montant_payer').focus();
+                        document.getElementById('classe_eleve').value = data.eleve.classe_selection || '';
                     } else {
                         alert(data.message || "Aucun élève trouvé avec ce matricule");
+                        // Réinitialiser les champs si aucun élève trouvé
+                        document.getElementById('nom_eleve').value = '';
+                        document.getElementById('postnom_eleve').value = '';
+                        document.getElementById('prenom_eleve').value = '';
                     }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert("Une erreur est survenue lors de la recherche");
+                    alert("Erreur lors de la communication avec le serveur");
+                    document.getElementById('nom_eleve').value = '';
                 });
         }
     </script>

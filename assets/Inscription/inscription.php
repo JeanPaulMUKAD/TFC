@@ -192,7 +192,7 @@
                                                 style="max-width: 90px; height: auto;">
                                         </div>
                                         <div>
-                                            <h5 class="text-primary">Inscription des élèves</h5>
+                                            <h5 class="text-primary text-center">Inscription des élèves</h5>
                                         </div>
                                         <?php echo $message; ?>
                                         <div class="mt-4">
@@ -249,9 +249,12 @@
                                                         <input type="text" name="annee_inscription" class="form-control"
                                                             placeholder="(ex: 2024-2025)" required>
                                                     </div>
-                                                   <button type="submit" class="btn btn-primary" onclick="toggleForm('inscription')">Inscrire</button>
-                                                    <button type="button" class="btn btn-warning" onclick="toggleForm('modifier')">Modifier</button>
-                                                    <button type="button" class="btn btn-danger" onclick="toggleForm('supprimer')">Supprimer</button>
+                                                    <div class="text-center">
+                                                        <button type="submit" class="btn btn-primary" onclick="toggleForm('inscription')">Inscrire</button>
+                                                        <button type="button" class="btn btn-warning" onclick="toggleForm('modifier')">Modifier</button>
+                                                        <button type="button" class="btn btn-danger" onclick="toggleForm('supprimer')">Supprimer</button>
+                                                    </div>
+                                                    
 
                                                 </form>
                                             </div>
@@ -311,8 +314,11 @@
                                                         <input type="text" name="annee_inscription" class="form-control"
                                                             placeholder="(ex: 2024-2025)" required>
                                                     </div>
-                                                    <button type="submit" class="btn btn-warning" onclick="toggleForm('modifier')">Modifier</button>
-                                                    <button class="btn btn-secondary" type="button" onclick="toggleForm('inscription')">Retour</button>
+                                                    <div class="text-center">
+                                                        <button type="submit" class="btn btn-warning" onclick="toggleForm('modifier')">Modifier</button>
+                                                        <button class="btn btn-secondary" type="button" onclick="toggleForm('inscription')">Retour</button>
+                                                    </div>
+                                                    
                                                 </form>
                                             </div>
 
@@ -323,8 +329,11 @@
                                                     <div class="mb-3"><label>Matricule de l’élève</label><input
                                                             type="text" name="matricule" class="form-control" placeholder="Veillez entrer le matricule" required>
                                                     </div>
-                                                    <button type="submit" class="btn btn-danger" onclick="toggleForm('supprimer')">Supprimer</button>
-                                                    <button class="btn btn-secondary" type="button" onclick="toggleForm('inscription')">Retour</button>
+                                                    <div class="text-center">
+                                                        <button type="submit" class="btn btn-danger" onclick="toggleForm('supprimer')">Supprimer</button>
+                                                        <button class="btn btn-secondary" type="button" onclick="toggleForm('inscription')">Retour</button>
+                                                    </div>
+                                                    
                                                 </form>
                                             </div>
                                         </div>
@@ -351,7 +360,7 @@
                         <div class="text-center">
                             <p class="mb-0">&copy;
                                 <script>document.write(new Date().getFullYear())</script> Administration <i
-                                    class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                    class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>
@@ -451,8 +460,8 @@
         // Création du cercle autour du logo
         cercle.style.width = '15vh';
         cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.border = '3px solid #0ab39c';
+        cercle.style.borderTop = '3px solid #405189';
         cercle.style.borderRadius = '50%';
         cercle.style.position = 'absolute';
         cercle.style.top = '50%';

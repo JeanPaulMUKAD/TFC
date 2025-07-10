@@ -68,7 +68,7 @@
             <div class="container">
                  <!-- Lien de retour -->
                 <div class="mb-4">
-                    <a href="../../Dashboad.php" class="text-white text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
+                    <a href="../Admin/Acceuil_Admin.php" class="text-white text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
                 </div>
                 <div class="row justify-content-center">
                     <div class="col-lg-6">
@@ -126,8 +126,7 @@
                             <?php echo $message; ?>
                             <!-- Formulaire AJOUT -->
                             <div id="form_add">
-                                 <h5 class="text-primary text-center">Ajouter un parent</h5>
-                                <p class="text-muted text-center">Remplissez les informations pour enregistrer un parent.</p>
+                                 <h5 class="text-primary text-center">Ajouter un utilisateur</h5>
                                 <?php echo $message; ?>
                                 <form method="POST">
                                     <input type="hidden" name="action" value="ajouter">
@@ -320,8 +319,8 @@
         // Création du cercle autour du logo
         cercle.style.width = '15vh';
         cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.border = '3px solid #0ab39c';
+        cercle.style.borderTop = '3px solid #405189';
         cercle.style.borderRadius = '50%';
         cercle.style.position = 'absolute';
         cercle.style.top = '50%';

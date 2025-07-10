@@ -249,8 +249,8 @@
         // Création du cercle autour du logo
         cercle.style.width = '15vh';
         cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.border = '3px solid #0ab39c';
+        cercle.style.borderTop = '3px solid #405189';
         cercle.style.borderRadius = '50%';
         cercle.style.position = 'absolute';
         cercle.style.top = '50%';

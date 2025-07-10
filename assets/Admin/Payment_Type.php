@@ -1,20 +1,3 @@
-<?php
-    require_once __DIR__ . '/../Controllers/AuthController.php';
-
-    $auth = new AuthController();
-    $message = "";
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $email = $_POST['Email'];
-
-        $result = $auth->resetPassword($email);
-        $message = $result['success']
-            ? "<p style='color: green; text-align: center;'>{$result['message']}</p>"
-            : "<p style='color: red; text-align: center;'>{$result['message']}</p>";
-    }
-?>
-
-
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
     data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
@@ -30,18 +13,18 @@
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="Themesbrand" name="author" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <link rel="shortcut icon" href="../images/favicon.ico">
 
     <!-- Layout config Js -->
-    <script src="assets/js/layout.js"></script>
+    <script src="../js/layout.js"></script>
     <!-- Bootstrap Css -->
-    <link href="assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="../css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <!-- Icons Css -->
-    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="../css/icons.min.css" rel="stylesheet" type="text/css" />
     <!-- App Css-->
-    <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link href="../css/app.min.css" rel="stylesheet" type="text/css" />
     <!-- custom Css-->
-    <link href="assets/css/custom.min.css" rel="stylesheet" type="text/css" />
+    <link href="../css/custom.min.css" rel="stylesheet" type="text/css" />
 
 </head>
 
@@ -53,6 +36,10 @@
         <!-- auth-page content -->
         <div class="auth-page-content overflow-hidden pt-lg-5">
             <div class="container">
+                <!-- Lien de retour -->
+                <div class="mb-4">
+                    <a href="../Admin/Acceuil_Admin.php" class="text-white text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
+                </div>
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card overflow-hidden card-bg-fill galaxy-border-none">
@@ -106,8 +93,10 @@
 
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4">
-                                        <h5 class="text-primary">Mot de passe oublié?</h5>
-                                        <p class="text-muted">Réinitialisez votre mot de passe.</p>
+                                        <div class="text-center my-3">
+                                            <img src="../images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
+                                        </div>
+                                        
 
                                         <div class="mt-2 text-center">
                                             <lord-icon src="https://cdn.lordicon.com/rhvddzym.json" trigger="loop"
@@ -115,32 +104,63 @@
                                             </lord-icon>
                                         </div>
 
-                                        <div class="alert border-0 alert-warning text-center mb-2 mx-2" role="alert">
-                                            Entrez votre e-mail et des instructions vous seront envoyées via votre boite
-                                            mail!
-                                        </div>
-                                        <div class="p-2">
+                                       
+                                        <div class="p-2" id="form_add">
                                             <form method="POST">
+                                                <h5 class="text-primary text-center">Configurer les types des paiements</h5>
+                                                <!-- <?php echo $message; ?> -->
                                                 <div class="mb-4">
-                                                    <label class="form-label">Email</label>
-                                                    <input type="email" class="form-control" id="Email" name="Email"
-                                                        placeholder="Enter email address" required>
+                                                    <label class="form-label">Nom</label>
+                                                    <input type="text" class="form-control" id="nom_type" name="nom_type"
+                                                        placeholder="Entrez le type des paiements" required>
                                                 </div>
 
-                                                <div class="text-center mt-4">
-                                                    <button class="btn btn-success w-100"
-                                                        type="submit">Confirmer</button>
+                                                <div class="d-flex justify-content-between">
+                                                    <button class="btn btn-success w-100 me-2"type="submit">Confirmer</button>
+                                                    <button class="btn btn-warning w-100 me-2" type="button"onclick="showForm('modify')">Modifier</button>
+                                                    <button class="btn btn-danger w-100" type="button"onclick="showForm('delete')">Supprimer</button>
                                                 </div>
                                             </form><!-- end form -->
-                                            <?php echo $message; ?>
                                         </div>
 
-                                        <div class="mt-5 text-center">
-                                            <p class="mb-0">Attendez, je me souviens de mon mot de passe... <a
-                                                    href="auth-signin-cover.php"
-                                                    class="fw-semibold text-primary text-decoration-underline"> Cliquez
-                                                    ici </a> </p>
+                                        <!-- Formulaire MODIFICATION -->
+                                        <div id="form_modify" style="display: none;">
+                                            <h5 class="text-primary text-center">Modifier un type de paiement</h5>
+                                            <!--<?php echo $modifyMessage; ?> -->
+                                            <form method="POST">
+                                                <input type="hidden" name="action" value="modifier">
+                                                <div class="mb-2">
+                                                    <label for="nom_type" class="form-label">Ancien nom complet:*</label>
+                                                    <input type="text" name="Old_nom_type" class="form-control"placeholder="Ancien nom" required>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label for="nom_type" class="form-label">Nouveau nom complet:*</label>
+                                                    <input type="text" name="New_nom_type" class="form-control"placeholder="Nouveau nom" required>
+                                                </div>
+                                                
+                                                <div class="d-flex justify-content-between">
+                                                    <button class="btn btn-primary w-100 me-2" type="submit">Valider les modifications</button>
+                                                    <button class="btn btn-secondary w-100" type="button"onclick="showForm('add')">Retour</button>
+                                                </div>
+                                            </form>
                                         </div>
+                                        <!-- Formulaire SUPPRESSION -->
+                                        <div id="form_delete" style="display: none;">
+                                            <h5 class="text-primary text-center">Supprimer un type de paiement</h5>
+                                            <!--<?php echo $deleteMessage; ?>-->
+                                            <form method="POST">
+                                                <input type="hidden" name="action" value="supprimer">
+                                                <div class="mb-3">
+                                                    <label for="nom_type" class="form-label">Nom complet:*</label>
+                                                    <input type="text" name="Delete_nom_type" class="form-control"placeholder="Nom à supprimer" required>
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <button class="btn btn-danger w-100 me-2" type="submit"onclick="return confirm('Confirmer suppression ?')">Supprimer</button>
+                                                    <button class="btn btn-secondary w-100" type="button"onclick="showForm('add')">Retour</button>
+                                                </div>
+                                            </form>
+                                        </div>
+
                                     </div>
                                 </div>
                                 <!-- end col -->
@@ -166,7 +186,7 @@
                         <div class="text-center">
                             <p class="mb-0">&copy;
                                 <script>document.write(new Date().getFullYear())</script> Administration<i
-                                    class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                    class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>
@@ -176,6 +196,15 @@
         <!-- end Footer -->
     </div>
     <!-- end auth-page-wrapper -->
+
+     <script>
+        function showForm(form) {
+            document.getElementById("form_add").style.display = "none";
+            document.getElementById("form_modify").style.display = "none";
+            document.getElementById("form_delete").style.display = "none";
+            document.getElementById("form_" + form).style.display = "block";
+        }
+    </script>
 
     <!-- JAVASCRIPT -->
     <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -239,7 +268,7 @@
         document.body.appendChild(masque);
 
         // Création du logo
-        logo.setAttribute('src', 'assets/images/logo_pp.png');
+        logo.setAttribute('src', '../images/logo_pp.png');
         logo.style.width = '10vh';
         logo.style.height = '10vh';
         logo.style.position = 'relative';

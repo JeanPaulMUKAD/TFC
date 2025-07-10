@@ -38,9 +38,9 @@ class AuthController
 
                 } elseif ($row['Role_User'] === 'sec') {
                     header("Location: ./assets/Inscription/Acceuil_inscrip.php");
-                }elseif ($row['Role_User'] === 'Admin') {
-                    header("Location: ./assets/Comptes/Acceuil_Admin.php");
-                }else {
+                } elseif ($row['Role_User'] === 'Admin') {
+                    header("Location: ./assets/Admin/Acceuil_Admin.php");
+                } else {
                     header("Location: ./auth-signin-cover.php");
                 }
                 exit;
@@ -447,16 +447,30 @@ class AuthController
     }
     public function rechercherEleveParMatricule($matricule)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM inscriptions WHERE matricule = ?");
-        $stmt->bind_param("s", $matricule);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // Valider le matricule
+        if (empty($matricule)) {
+            return ['success' => false, 'message' => 'Le matricule est requis'];
+        }
 
-        if ($result->num_rows > 0) {
-            $eleve = $result->fetch_assoc();
-            return ['success' => true, 'eleve' => $eleve];
-        } else {
-            return ['success' => false, 'message' => "Aucun élève trouvé avec ce matricule"];
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM inscriptions WHERE matricule = ?");
+            $stmt->bind_param("s", $matricule);
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+                if ($result->num_rows > 0) {
+                    return [
+                        'success' => true,
+                        'eleve' => $result->fetch_assoc()
+                    ];
+                } else {
+                    return ['success' => false, 'message' => 'Aucun élève trouvé avec ce matricule'];
+                }
+            } else {
+                return ['success' => false, 'message' => 'Erreur de base de données'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Erreur: ' . $e->getMessage()];
         }
     }
 
@@ -639,7 +653,8 @@ class AuthController
         }
     }
 
-    public function obtenirPaiementsParMatricule($matricule) {
+    public function obtenirPaiementsParMatricule($matricule)
+    {
         // Valider le matricule
         if (empty($matricule)) {
             return ['success' => false, 'message' => 'Le matricule est requis'];
@@ -647,11 +662,11 @@ class AuthController
 
         $stmt = $this->conn->prepare("SELECT * FROM paiement WHERE matricule = ? ORDER BY date_paiement DESC");
         $stmt->bind_param("s", $matricule);
-        
+
         if ($stmt->execute()) {
             $result = $stmt->get_result();
             $paiements = $result->fetch_all(MYSQLI_ASSOC);
-            
+
             return ['success' => true, 'paiements' => $paiements];
         } else {
             return ['success' => false, 'message' => 'Erreur de base de données'];

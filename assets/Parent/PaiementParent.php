@@ -1,21 +1,21 @@
 <?php
-    $message = "";  
-    require_once __DIR__ . '/../Controllers/AuthController.php';
-    $auth = new AuthController();
+$message = "";
+require_once __DIR__ . '/../Controllers/AuthController.php';
+$auth = new AuthController();
 
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $response = $auth->handlePaymentAndReport($_POST);
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $response = $auth->handlePaymentAndReport($_POST);
 
-        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
-            // Réponse JSON pour AJAX
-            header('Content-Type: application/json');
-            echo json_encode($response);
-            exit;
-        } else {
-            // Pour un POST classique (ex: paiement local)
-            $message = $response['message'];
-        }
+    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
+        // Réponse JSON pour AJAX
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit;
+    } else {
+        // Pour un POST classique (ex: paiement local)
+        $message = $response['message'];
     }
+}
 
 ?>
 
@@ -131,7 +131,7 @@
                                         <div class="bg-overlay"></div>
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
-                                                
+
                                             </div>
                                             <div class="mt-auto">
                                                 <div class="mb-3">
@@ -175,11 +175,12 @@
                                 <div class="col-lg-6">
                                     <div class="p-lg-5 p-4">
                                         <div class="text-center my-3">
-                                            <img src="../images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
+                                            <img src="../images/logo_pp2.png" alt="Logo"
+                                                style="max-width: 90px; height: auto;">
                                         </div>
 
                                         <div>
-                                            <h5 class="text-primary">Paiement en lignes</h5>
+                                            <h5 class="text-primary text-center">Paiement en lignes</h5>
                                         </div>
                                         <?php echo $message; ?>
                                         <div id="form-error-message" class="text-danger mb-3 fw-semibold"></div>
@@ -189,20 +190,67 @@
                                                 <input type="hidden" name="local_payment" value="1">
                                                 <input type="hidden" name="payment_validated" id="payment_validated"
                                                     value="0">
-                                                <input type="hidden" name="transaction_id" id="transaction_id" value="">
-                                                <div class="mb-3">
-                                                    <label for="nom_eleve" class="form-label">Nom complet de l'élève
-                                                        <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control text-xl" id="nom_eleve"
-                                                        name="nom_eleve" placeholder="Entrez le nom complet de l'élève"
-                                                        required>
+                                                <input type="hidden" name="local_payment" value="1">
+                                                <label for="matricule" class="form-label">Matricule <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="matricule" name="matricule"
+                                                    placeholder="Entrez le matricule" required
+                                                    onblur="chercherEleveParMatricule(this.value)">
+                                                <div class="invalid-feedback">
+                                                    Veuillez entrer le matricule de l'élève.
+                                                </div>
+                                                <!-- Nouveaux champs pour les informations de l'élève -->
+                                                <div class="row">
+                                                    <div class="col-md-4 mb-3">
+                                                        <label for="nom_eleve" class="form-label">Nom <span
+                                                                class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="nom_eleve"
+                                                            name="nom_eleve" placeholder="Nom" required>
+                                                        <div class="invalid-feedback">
+                                                            Veuillez entrer le nom de l'élève.
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-4 mb-3">
+                                                        <label for="postnom_eleve" class="form-label">Postnom <span
+                                                                class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="postnom_eleve"
+                                                            name="postnom_eleve" placeholder="Postnom" required>
+                                                        <div class="invalid-feedback">
+                                                            Veuillez entrer le postnom de l'élève.
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-4 mb-3">
+                                                        <label for="prenom_eleve" class="form-label">Prénom <span
+                                                                class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="prenom_eleve"
+                                                            name="prenom_eleve" placeholder="Prénom" required>
+                                                        <div class="invalid-feedback">
+                                                            Veuillez entrer le prénom de l'élève.
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label for="classe_selection" class="form-label">Classe <span
+                                                    <label for="sexe_eleve" class="form-label">Sexe <span
                                                             class="text-danger">*</span></label>
-                                                    <select class="form-control" id="classe_selection"
-                                                        name="classe_selection" required>
+                                                    <select class="form-control" id="sexe_eleve" name="sexe_eleve"
+                                                        required>
+                                                        <option value="">Sélectionnez le sexe</option>
+                                                        <option value="M">Masculin</option>
+                                                        <option value="F">Féminin</option>
+                                                    </select>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez sélectionner le sexe de l'élève.
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label for="classe_eleve" class="form-label">Classe <span
+                                                            class="text-danger">*</span></label>
+                                                    <select class="form-control" id="classe_eleve" name="classe_eleve"
+                                                        required>
                                                         <option value="">Sélectionnez une classe</option>
                                                         <option value="7e EB">7e EB</option>
                                                         <option value="8e EB">8e EB</option>
@@ -229,8 +277,10 @@
                                                         <option value="4ere MG">4ère MG</option>
                                                         <option value="4ere ELECT">4ère ELECT</option>
                                                         <option value="4eme TCC">4ème TCC</option>
-
                                                     </select>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez sélectionner une classe.
+                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -266,79 +316,6 @@
                                             </form>
 
                                             <hr class="my-4">
-
-                                            <div class="text-center mb-3">
-                                                <button id="toggleReportForm" class="btn btn-info">Consulter le
-                                                    rapport</button>
-                                            </div>
-
-                                            <div id="reportResults" class="mb-4" style="display:none;">
-                                                <h5>Rapport de paiement</h5>
-                                                <table class="table table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Montant payé</th>
-                                                            <th>Motif</th>
-                                                            <th>ID Transaction</th>
-                                                            <th>Statut</th>
-                                                            <th>Classe</th>
-                                                            <th>Total Annuel</th>
-                                                            <th>Reste à payer</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="reportBody">
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            <div id="reportForm" style="display:none; max-width: 500px; margin: auto;">
-                                                <form id="fetchReportForm" class="needs-validation" novalidate>
-                                                    <div class="mb-3">
-                                                        <label for="nom_eleve_report" class="form-label">Nom complet de
-                                                            l'élève <span class="text-danger">*</span></label>
-                                                        <input type="text" class="form-control" id="nom_eleve_report"
-                                                            name="nom_eleve_report" placeholder="Entrez le nom complet"
-                                                            required>
-                                                    </div>
-
-                                                    <div class="mb-3">
-                                                        <label for="classe_report" class="form-label">Classe <span
-                                                                class="text-danger">*</span></label>
-                                                        <select class="form-control" id="classe_report"
-                                                            name="classe_report" required>
-                                                            <option value="">Sélectionnez une classe</option>
-                                                            <option value="7e EB">7e EB</option>
-                                                            <option value="8e EB">8e EB</option>
-                                                            <option value="1ere SC">1ère SC</option>
-                                                            <option value="1ere CG">1ère CG</option>
-                                                            <option value="1ere HP">1ère HP</option>
-                                                            <option value="1ere MG">1ère MG</option>
-                                                            <option value="1ere ELECT">1ère ELECT</option>
-                                                            <option value="2ere SC">2ère SC</option>
-                                                            <option value="2ere CG">2ère CG</option>
-                                                            <option value="2ere HP">2ère HP</option>
-                                                            <option value="2ere MG">2ère MG</option>
-                                                            <option value="2ere ELECT">2ère ELECT</option>
-                                                            <option value="2eme TCC">2ème TCC</option>
-                                                            <option value="3ere SC">3ère SC</option>
-                                                            <option value="3ere CG">3ère CG</option>
-                                                            <option value="3ere HP">3ère HP</option>
-                                                            <option value="3ere MG">3ère MG</option>
-                                                            <option value="3ere ELECT">3ère ELECT</option>
-                                                            <option value="3eme TCC">3ème TCC</option>
-                                                            <option value="4ere SC">4ère SC</option>
-                                                            <option value="4ere CG">4ère CG</option>
-                                                            <option value="4ere HP">4ère HP</option>
-                                                            <option value="4ere MG">4ère MG</option>
-                                                            <option value="4ere ELECT">4ère ELECT</option>
-                                                            <option value="4eme TCC">4ème TCC</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <button type="submit"
-                                                        class="btn btn-primary w-100">Rechercher</button>
-                                                </form>
-                                            </div>
 
                                             <script>
                                                 document.getElementById('toggleReportForm').addEventListener('click', function () {
@@ -434,7 +411,7 @@
                         <div class="text-center">
                             <p class="mb-0">&copy;
                                 <script>document.write(new Date().getFullYear())</script> Administration <i
-                                    class="mdi mdi-heart text-danger"></i> by C.S.P.P.UNILU
+                                    class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
                             </p>
                         </div>
                     </div>
@@ -524,8 +501,8 @@
         // Création du cercle autour du logo
         cercle.style.width = '15vh';
         cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
+        cercle.style.border = '3px solid #0ab39c';
+        cercle.style.borderTop = '3px solid #405189';
         cercle.style.borderRadius = '50%';
         cercle.style.position = 'absolute';
         cercle.style.top = '50%';
@@ -538,6 +515,45 @@
         // Variables de l'animation
         let anime;
 
+    </script>
+
+    <script>
+        function chercherEleveParMatricule(matricule) {
+            if (!matricule) return;
+
+            // Afficher un indicateur de chargement
+            const nomField = document.getElementById('nom_eleve');
+            nomField.value = "Recherche en cours...";
+
+            fetch(`../Controllers/AuthController.php?action=rechercherEleve&matricule=${encodeURIComponent(matricule)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Remplissage des champs
+                        document.getElementById('nom_eleve').value = data.eleve.nom_eleve || '';
+                        document.getElementById('postnom_eleve').value = data.eleve.postnom_eleve || '';
+                        document.getElementById('prenom_eleve').value = data.eleve.prenom_eleve || '';
+                        document.getElementById('sexe_eleve').value = data.eleve.sexe_eleve || 'M';
+                        document.getElementById('classe_eleve').value = data.eleve.classe_selection || '';
+                    } else {
+                        alert(data.message || "Aucun élève trouvé avec ce matricule");
+                        // Réinitialiser les champs si aucun élève trouvé
+                        document.getElementById('nom_eleve').value = '';
+                        document.getElementById('postnom_eleve').value = '';
+                        document.getElementById('prenom_eleve').value = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert("Erreur lors de la communication avec le serveur");
+                    document.getElementById('nom_eleve').value = '';
+                });
+        }
     </script>
 
 </body>
