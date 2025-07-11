@@ -203,6 +203,8 @@
                                 <td class="px-4 py-2">${paiement.montant_payer}</td>
                                 <td class="px-4 py-2">${paiement.motif_paiement}</td>
                                 <td class="px-4 py-2">${paiement.classe_eleve}</td>
+                                <td class="px-4 py-2">${paiement.nom_parent}</td>
+                                <td class="px-4 py-2">${paiement.adresse_eleve}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 py-1 text-xs rounded-full ${paiement.payment_status === 'success'
                                     ? 'bg-green-100 text-green-800'
@@ -227,6 +229,8 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom parent</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adresse</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
                                 </tr>
                             </thead>

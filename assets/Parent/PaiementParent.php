@@ -1,22 +1,27 @@
 <?php
-$message = "";
-require_once __DIR__ . '/../Controllers/AuthController.php';
-$auth = new AuthController();
+    $message = "";
+    require_once __DIR__ . '/../Controllers/AuthController.php';
+    $auth = new AuthController();
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $response = $auth->handlePaymentAndReport($_POST);
-
-    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
-        // Réponse JSON pour AJAX
+    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
         header('Content-Type: application/json');
-        echo json_encode($response);
+        echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
         exit;
-    } else {
-        // Pour un POST classique (ex: paiement local)
-        $message = $response['message'];
     }
-}
 
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Si c'est une requête AJAX pour le rapport
+        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
+            header('Content-Type: application/json');
+            echo json_encode($auth->handlePaymentAndReport($_POST));
+            exit;
+        }
+
+        else {
+            $response = $auth->handlePaymentAndReport($_POST);
+            $message = $response['message'];
+        }
+    }
 ?>
 
 <!doctype html>
@@ -284,6 +289,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 </div>
 
                                                 <div class="mb-3">
+                                                    <label for="nom_parent" class="form-control">Nom du parent<span class="text-danger">*</span></label>
+                                                    <input type="text" name="nom_parent" class="form-control"
+                                                        placeholder="Entrez le nom du parent(tuteur) de l'eleve"
+                                                        required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="adresse_eleve" class="form_control">Adresse<span class="text-danger">*</span></label>
+                                                    <input type="text" name="adresse_eleve" class="form-control"
+                                                        placeholder="Entrez l'adresse de l'eleve" required>
+                                                </div>
+
+                                                <div class="mb-3">
                                                     <label for="montant_payer" class="form-label">Montant à payer <span
                                                             class="text-danger">*</span></label>
                                                     <input type="number" class="form-control" id="montant_payer"
@@ -521,37 +538,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         function chercherEleveParMatricule(matricule) {
             if (!matricule) return;
 
-            // Afficher un indicateur de chargement
-            const nomField = document.getElementById('nom_eleve');
-            nomField.value = "Recherche en cours...";
-
-            fetch(`../Controllers/AuthController.php?action=rechercherEleve&matricule=${encodeURIComponent(matricule)}`)
+            fetch(window.location.pathname + '?matricule=' + encodeURIComponent(matricule))
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
                 })
                 .then(data => {
                     if (data.success) {
-                        // Remplissage des champs
-                        document.getElementById('nom_eleve').value = data.eleve.nom_eleve || '';
-                        document.getElementById('postnom_eleve').value = data.eleve.postnom_eleve || '';
-                        document.getElementById('prenom_eleve').value = data.eleve.prenom_eleve || '';
-                        document.getElementById('sexe_eleve').value = data.eleve.sexe_eleve || 'M';
-                        document.getElementById('classe_eleve').value = data.eleve.classe_selection || '';
+                        // Remplir tous les champs
+                        document.getElementById('nom_eleve').value = data.nom_eleve || '';
+                        document.getElementById('postnom_eleve').value = data.postnom_eleve || '';
+                        document.getElementById('prenom_eleve').value = data.prenom_eleve || '';
+                        document.getElementById('sexe_eleve').value = data.sexe_eleve || '';
+                        document.getElementById('classe_eleve').value = data.classe_selection || '';
+
+                        // Correction pour les champs nom_parent et adresse_eleve
+                        document.querySelector('input[name="nom_parent"]').value = data.nom_parent || '';
+                        document.querySelector('input[name="adresse_eleve"]').value = data.adresse_eleve || '';
+
+                        document.getElementById('form-error-message').textContent = '';
                     } else {
-                        alert(data.message || "Aucun élève trouvé avec ce matricule");
-                        // Réinitialiser les champs si aucun élève trouvé
-                        document.getElementById('nom_eleve').value = '';
-                        document.getElementById('postnom_eleve').value = '';
-                        document.getElementById('prenom_eleve').value = '';
+                        document.getElementById('form-error-message').textContent = data.message || 'Élève non trouvé';
+                        // Réinitialiser les champs si élève non trouvé
+                        document.querySelector('input[name="nom_parent"]').value = '';
+                        document.querySelector('input[name="adresse_eleve"]').value = '';
                     }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert("Erreur lors de la communication avec le serveur");
-                    document.getElementById('nom_eleve').value = '';
+                    document.getElementById('form-error-message').textContent = 'Erreur lors de la recherche';
                 });
         }
     </script>

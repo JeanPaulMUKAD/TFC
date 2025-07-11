@@ -107,13 +107,13 @@
                                             <form action="#" method="POST">
 
                                                 <div class="mb-3">
-                                                    <label for="Names_User" class="form-label">Nom complet</label>
+                                                    <label for="Names_User" class="form-label">Nom complet<span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="Names_User" name="Names_User" placeholder="Entrez votre nom complet" required>
                                                 </div>
 
                                                 <div class="mb-3">
                                                     
-                                                    <label class="form-label" for="Password_User">Mot de passe</label>
+                                                    <label class="form-label" for="Password_User">Mot de passe<span class="text-danger">*</span></label>
                                                     <div class="position-relative auth-pass-inputgroup mb-3">
                                                         <input type="password" class="form-control pe-5 password-input" placeholder="Entrez votre mot de passe" id="Password_User" name="Password_User" required>
                                                         <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon"><i class="ri-eye-fill align-middle"></i></button>

@@ -4,18 +4,15 @@ require_once __DIR__ . '/../Controllers/AuthController.php';
 $auth = new AuthController();
 $message = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
-    $nom_eleve = $_POST['nom_eleve'] ?? '';
-    $postnom_eleve = $_POST['postnom_eleve'] ?? '';
-    $prenom_eleve = $_POST['prenom_eleve'] ?? '';
-    $sexe_eleve = $_POST['sexe_eleve'] ?? '';
-    $montant_payer = $_POST['montant_payer'] ?? '';
-    $devise1 = $_POST['devise1'] ?? '';
-    $devise = $_POST['devise'] ?? '';
-    $motif_paiement = $_POST['motif_paiement'] ?? '';
-    $classe_selection = $_POST['classe_selection'] ?? '';
-    $total_annuel = $_POST['total_annuel'] ?? '';
+// Gestion de la recherche par matricule (AJAX)
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
+    header('Content-Type: application/json');
+    echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
+    exit;
+}
 
+// Gestion des soumissions POST normales
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
     $result = $auth->processCashPayment(
         $_POST['matricule'] ?? '',
         $_POST['nom_eleve'] ?? '',
@@ -23,6 +20,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
         $_POST['prenom_eleve'] ?? '',
         $_POST['sexe_eleve'] ?? 'M',
         $_POST['classe_eleve'] ?? '',
+        $_POST['nom_parent'] ?? '',
+        $_POST['adresse_eleve'] ?? '',
         $_POST['montant_payer'] ?? '',
         $_POST['devise1'] ?? '',
         $_POST['devise'] ?? '',
@@ -136,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
                                                 style="max-width: 90px; height: auto;">
                                         </div>
                                         <div>
-                                            <h5 class="text-primary">Paiement en espèces</h5>
+                                            <h5 class="text-primary text-center">Paiement en espèces</h5>
                                         </div>
                                         <?php echo $message; ?>
                                         <div class="mt-4">
@@ -234,6 +233,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
                                                         <div class="invalid-feedback">
                                                             Veuillez sélectionner une classe.
                                                         </div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="nom_parent" class="form-label">Nom du parent <span class="text-danger">*</span></label>
+                                                        <input type="text" name="nom_parent" id="nom_parent" class="form-control"
+                                                            placeholder="Entrez le nom du parent(tuteur) de l'eleve" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="adresse_eleve" class="form-label">Adresse <span class="text-danger">*</span></label>
+                                                        <input type="text" name="adresse_eleve" id="adresse_eleve" class="form-control"
+                                                            placeholder="Entrez l'adresse de l'eleve" required>
                                                     </div>
 
                                                     <div class="mb-3">
@@ -435,37 +445,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
         function chercherEleveParMatricule(matricule) {
             if (!matricule) return;
 
-            // Afficher un indicateur de chargement
-            const nomField = document.getElementById('nom_eleve');
-            nomField.value = "Recherche en cours...";
-
-            fetch(`../Controllers/AuthController.php?action=rechercherEleve&matricule=${encodeURIComponent(matricule)}`)
+            fetch(window.location.pathname + '?matricule=' + encodeURIComponent(matricule))
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
                 })
                 .then(data => {
                     if (data.success) {
-                        // Remplissage des champs
-                        document.getElementById('nom_eleve').value = data.eleve.nom_eleve || '';
-                        document.getElementById('postnom_eleve').value = data.eleve.postnom_eleve || '';
-                        document.getElementById('prenom_eleve').value = data.eleve.prenom_eleve || '';
-                        document.getElementById('sexe_eleve').value = data.eleve.sexe_eleve || 'M';
-                        document.getElementById('classe_eleve').value = data.eleve.classe_selection || '';
+                        // Remplir tous les champs
+                        document.getElementById('nom_eleve').value = data.nom_eleve || '';
+                        document.getElementById('postnom_eleve').value = data.postnom_eleve || '';
+                        document.getElementById('prenom_eleve').value = data.prenom_eleve || '';
+                        document.getElementById('sexe_eleve').value = data.sexe_eleve || '';
+                        document.getElementById('classe_eleve').value = data.classe_selection || '';
+
+                        // Correction pour les champs nom_parent et adresse_eleve
+                        document.querySelector('input[name="nom_parent"]').value = data.nom_parent || '';
+                        document.querySelector('input[name="adresse_eleve"]').value = data.adresse_eleve || '';
+
+                        document.getElementById('form-error-message').textContent = '';
                     } else {
-                        alert(data.message || "Aucun élève trouvé avec ce matricule");
-                        // Réinitialiser les champs si aucun élève trouvé
-                        document.getElementById('nom_eleve').value = '';
-                        document.getElementById('postnom_eleve').value = '';
-                        document.getElementById('prenom_eleve').value = '';
+                        document.getElementById('form-error-message').textContent = data.message || 'Élève non trouvé';
+                        // Réinitialiser les champs si élève non trouvé
+                        document.querySelector('input[name="nom_parent"]').value = '';
+                        document.querySelector('input[name="adresse_eleve"]').value = '';
                     }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert("Erreur lors de la communication avec le serveur");
-                    document.getElementById('nom_eleve').value = '';
+                    document.getElementById('form-error-message').textContent = 'Erreur lors de la recherche';
                 });
         }
     </script>

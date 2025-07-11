@@ -1,3 +1,33 @@
+<?php
+    require_once '../Controllers/ControleurType.php';
+    $controleur = new ControleurType();
+
+    $message = ''; 
+
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+        if (isset($_POST['action'])) {
+            switch ($_POST['action']) {
+                case 'ajouter':
+                    if (!empty($_POST["nom_type"])) {
+                        $message = $controleur->enregistrerType($_POST["nom_type"]);
+                    }
+                    break;
+                case 'modifier':
+                    if (!empty($_POST["Old_nom_type"]) && !empty($_POST["New_nom_type"])) {
+                        $message = $controleur->modifierType($_POST["Old_nom_type"], $_POST["New_nom_type"]);
+                    }
+                    break;
+                case 'supprimer':
+                    if (!empty($_POST["Delete_nom_type"])) {
+                        $message = $controleur->supprimerType($_POST["Delete_nom_type"]);
+                    }
+                    break;
+            }
+        }
+    }
+?>
+
+
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
     data-sidebar-image="none" data-preloader="disable" data-theme="default" data-theme-colors="default">
@@ -105,58 +135,66 @@
                                         </div>
 
                                        
-                                        <div class="p-2" id="form_add">
+                                         <div class="p-2" id="form_add">
                                             <form method="POST">
+                                                <input type="hidden" name="action" value="ajouter">
                                                 <h5 class="text-primary text-center">Configurer les types des paiements</h5>
-                                                <!-- <?php echo $message; ?> -->
+                                                <?php if (!empty($message)): ?>
+                                                    <div class="alert alert-info"><?php echo $message; ?></div>
+                                                <?php endif; ?>
                                                 <div class="mb-4">
-                                                    <label class="form-label">Nom</label>
+                                                    <label class="form-label">Nom</label><span class="text-danger">*</span>
                                                     <input type="text" class="form-control" id="nom_type" name="nom_type"
                                                         placeholder="Entrez le type des paiements" required>
                                                 </div>
 
                                                 <div class="d-flex justify-content-between">
-                                                    <button class="btn btn-success w-100 me-2"type="submit">Confirmer</button>
-                                                    <button class="btn btn-warning w-100 me-2" type="button"onclick="showForm('modify')">Modifier</button>
-                                                    <button class="btn btn-danger w-100" type="button"onclick="showForm('delete')">Supprimer</button>
+                                                    <button class="btn btn-success w-100 me-2" type="submit">Confirmer</button>
+                                                    <button class="btn btn-warning w-100 me-2" type="button" onclick="showForm('modify')">Modifier</button>
+                                                    <button class="btn btn-danger w-100" type="button" onclick="showForm('delete')">Supprimer</button>
                                                 </div>
-                                            </form><!-- end form -->
+                                            </form>
                                         </div>
 
-                                        <!-- Formulaire MODIFICATION -->
+                                         <!-- Formulaire MODIFICATION -->
                                         <div id="form_modify" style="display: none;">
                                             <h5 class="text-primary text-center">Modifier un type de paiement</h5>
-                                            <!--<?php echo $modifyMessage; ?> -->
+                                            <?php if (!empty($message) && isset($_POST['action']) && $_POST['action'] === 'modifier'): ?>
+                                                <div class="alert alert-info"><?php echo $message; ?></div>
+                                            <?php endif; ?>
                                             <form method="POST">
                                                 <input type="hidden" name="action" value="modifier">
                                                 <div class="mb-2">
-                                                    <label for="nom_type" class="form-label">Ancien nom complet:*</label>
-                                                    <input type="text" name="Old_nom_type" class="form-control"placeholder="Ancien nom" required>
+                                                    <label for="nom_type" class="form-label">Ancien nom complet <span class="text-danger">*</span></label>
+                                                    <input type="text" name="Old_nom_type" class="form-control" placeholder="Ancien nom" required>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <label for="nom_type" class="form-label">Nouveau nom complet:*</label>
-                                                    <input type="text" name="New_nom_type" class="form-control"placeholder="Nouveau nom" required>
+                                                    <label for="nom_type" class="form-label">Nouveau nom complet <span class="text-danger">*</span></label>
+                                                    <input type="text" name="New_nom_type" class="form-control" placeholder="Nouveau nom" required>
                                                 </div>
                                                 
                                                 <div class="d-flex justify-content-between">
                                                     <button class="btn btn-primary w-100 me-2" type="submit">Valider les modifications</button>
-                                                    <button class="btn btn-secondary w-100" type="button"onclick="showForm('add')">Retour</button>
+                                                    <button class="btn btn-secondary w-100" type="button" onclick="showForm('add')">Retour</button>
                                                 </div>
                                             </form>
                                         </div>
-                                        <!-- Formulaire SUPPRESSION -->
+
+                                         <!-- Formulaire SUPPRESSION -->
                                         <div id="form_delete" style="display: none;">
                                             <h5 class="text-primary text-center">Supprimer un type de paiement</h5>
-                                            <!--<?php echo $deleteMessage; ?>-->
+                                            <?php if (!empty($message) && isset($_POST['action']) && $_POST['action'] === 'supprimer'): ?>
+                                                <div class="alert alert-info"><?php echo $message; ?></div>
+                                            <?php endif; ?>
                                             <form method="POST">
                                                 <input type="hidden" name="action" value="supprimer">
                                                 <div class="mb-3">
-                                                    <label for="nom_type" class="form-label">Nom complet:*</label>
-                                                    <input type="text" name="Delete_nom_type" class="form-control"placeholder="Nom à supprimer" required>
+                                                    <label for="nom_type" class="form-label">Nom complet <span class="text-danger">*</span></label>
+                                                    <input type="text" name="Delete_nom_type" class="form-control" placeholder="Nom à supprimer" required>
                                                 </div>
                                                 <div class="d-flex justify-content-between">
-                                                    <button class="btn btn-danger w-100 me-2" type="submit"onclick="return confirm('Confirmer suppression ?')">Supprimer</button>
-                                                    <button class="btn btn-secondary w-100" type="button"onclick="showForm('add')">Retour</button>
+                                                    <button class="btn btn-danger w-100 me-2" type="submit">Supprimer</button>
+                                                    <button class="btn btn-secondary w-100" type="button" onclick="showForm('add')">Retour</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -197,12 +235,17 @@
     </div>
     <!-- end auth-page-wrapper -->
 
-     <script>
+     
+    <script>
         function showForm(form) {
             document.getElementById("form_add").style.display = "none";
             document.getElementById("form_modify").style.display = "none";
             document.getElementById("form_delete").style.display = "none";
             document.getElementById("form_" + form).style.display = "block";
+            
+            // Réinitialiser le message quand on change de formulaire
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => alert.style.display = 'none');
         }
     </script>
 

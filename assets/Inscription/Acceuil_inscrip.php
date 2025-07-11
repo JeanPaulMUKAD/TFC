@@ -215,6 +215,8 @@
                                         <th class="px-4 py-2">Prénom</th>
                                         <th class="px-4 py-2">Sexe</th>
                                         <th class="px-4 py-2">Classe</th>
+                                        <th class="px-4 py-2">Nom Parent</th>
+                                        <th class="px-4 py-2">Adresse</th>
                                         <th class="px-4 py-2">Année</th>
                                     </tr>
                                 </thead>
@@ -226,6 +228,8 @@
                                         <td class="px-4 py-2">${eleve.prenom_eleve}</td>
                                         <td class="px-4 py-2">${eleve.sexe_eleve}</td>
                                         <td class="px-4 py-2">${eleve.classe_selection}</td>
+                                        <td class="px-4 py-2">${eleve.nom_parent}</td>
+                                        <td class="px-4 py-2">${eleve.adresse_eleve}</td>
                                         <td class="px-4 py-2">${eleve.annee_inscription}</td>
                                     </tr>
                                 </tbody>

@@ -5,7 +5,6 @@
     $message = "";
 
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
         // INSCRIPTION
         if (isset($_POST['inscription_eleve'])) {
             $nom_eleve = trim($_POST['nom_eleve'] ?? '');
@@ -13,6 +12,8 @@
             $prenom_eleve = trim($_POST['prenom_eleve'] ?? '');
             $sexe_eleve = $_POST['sexe_eleve'] ?? '';
             $classe_selection = $_POST['classe_selection'] ?? '';
+            $nom_parent = trim($_POST['nom_parent'] ?? '');
+            $adresse_eleve = trim($_POST['adresse_eleve'] ?? ''); 
             $annee_inscription = trim($_POST['annee_inscription'] ?? '');
 
             if (
@@ -21,6 +22,8 @@
                 empty($prenom_eleve) ||
                 empty($sexe_eleve) ||
                 empty($classe_selection) ||
+                empty($nom_parent) ||
+                empty($adresse_eleve) ||
                 empty($annee_inscription)
             ) {
                 $message = "<p class='text-red-500 text-center'>Tous les champs sont requis pour l'inscription.</p>";
@@ -31,6 +34,8 @@
                     $prenom_eleve,
                     $sexe_eleve,
                     $classe_selection,
+                    $nom_parent,
+                    $adresse_eleve,
                     $annee_inscription
                 );
 
@@ -50,11 +55,14 @@
             $prenom_eleve = trim($_POST['prenom_eleve'] ?? '');
             $sexe_eleve = $_POST['sexe_eleve'] ?? '';
             $classe_selection = $_POST['classe_selection'] ?? '';
+            $nom_parent = trim($_POST['nom_parent'] ?? '');
+            $adresse_eleve = trim($_POST['adresse_eleve'] ?? '');
             $annee_inscription = trim($_POST['annee_inscription'] ?? '');
 
             if (
                 empty($id) || empty($nom_eleve) || empty($postnom_eleve) || empty($prenom_eleve) ||
-                empty($sexe_eleve) || empty($classe_selection) || empty($annee_inscription)
+                empty($sexe_eleve) || empty($classe_selection) || empty($nom_parent) ||
+                empty($adresse_eleve) || empty($annee_inscription)
             ) {
                 $message = "<p class='text-red-500 text-center'>Tous les champs sont requis pour la modification.</p>";
             } else {
@@ -65,6 +73,8 @@
                     $prenom_eleve,
                     $sexe_eleve,
                     $classe_selection,
+                    $nom_parent,
+                    $adresse_eleve,
                     $annee_inscription
                 );
 
@@ -76,7 +86,7 @@
             }
         }
 
-        // SUPPRESSION
+        // SUPPRESSION 
         if (isset($_POST['supprimer_eleve'])) {
             $matricule = trim($_POST['matricule'] ?? '');
 
@@ -245,6 +255,14 @@
                                                             <option value="4eme TCC">4ème TCC</option>
                                                         </select>
                                                     </div>
+                                                    <div class="mb-3"><label>Nom du parent</label>
+                                                        <input type="text" name="nom_parent" class="form-control"
+                                                            placeholder="Entrez le nom du parent(tuteur) de l'eleve" required>
+                                                    </div>
+                                                    <div class="mb-3"><label>Adresse</label>
+                                                        <input type="text" name="adresse_eleve" class="form-control"
+                                                            placeholder="Entrez l'adresse de l'eleve" required>
+                                                    </div>
                                                     <div class="mb-3"><label>Année d'inscription</label>
                                                         <input type="text" name="annee_inscription" class="form-control"
                                                             placeholder="(ex: 2024-2025)" required>
@@ -309,6 +327,14 @@
                                                             <option value="4ere ELECT">4ère ELECT</option>
                                                             <option value="4eme TCC">4ème TCC</option>
                                                         </select>
+                                                    </div>
+                                                    <div class="mb-3"><label>Nom du parent</label>
+                                                        <input type="text" name="nom_parent" class="form-control"
+                                                            placeholder="Entrez le nom du parent(tuteur) de l'eleve" required>
+                                                    </div>
+                                                    <div class="mb-3"><label>Adresse</label>
+                                                        <input type="text" name="adresse_eleve" class="form-control"
+                                                            placeholder="Entrez l'adresse de l'eleve" required>
                                                     </div>
                                                     <div class="mb-3"><label>Année d'inscription</label>
                                                         <input type="text" name="annee_inscription" class="form-control"

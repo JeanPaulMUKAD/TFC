@@ -355,6 +355,8 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom parent</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adresse</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
             </tr>
           </thead>
@@ -384,6 +386,12 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${p.classe_eleve}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.nom_parent}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${p.adresse_eleve}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 py-1 text-xs rounded-full ${p.payment_status === 'success'
@@ -418,6 +426,9 @@
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom parent</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adresse</th>
+                  
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -428,6 +439,8 @@
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.prenom_eleve}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.classe_selection}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.nom_parent}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${eleve.adresse_eleve}</td>
                 </tr>
               </tbody>
             </table>

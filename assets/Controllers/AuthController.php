@@ -255,8 +255,7 @@ class AuthController
     //PAIEMENT EN LIGNE
     public function handlePaymentAndReport(array $postData): array
     {
-        // Cette fonction prend les données $_POST en paramètre
-        // et retourne un tableau avec 'success' bool et 'message' ou 'payments'
+
 
         // Récupération sécurisée des données
         $conn = $this->conn;
@@ -408,7 +407,9 @@ class AuthController
         $postnom_eleve,
         $prenom_eleve,
         $sexe_eleve,
-        $classe_eleve, // On utilise uniquement ce champ maintenant
+        $classe_eleve,
+        $nom_parent,
+        $adresse_eleve,
         $montant_payer,
         $devise1,
         $devise,
@@ -420,19 +421,21 @@ class AuthController
         $total_annuel_str = $total_annuel . $devise1;
 
         $stmt = $this->conn->prepare("INSERT INTO paiement 
-                                (matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, 
-                                 classe_eleve, montant_payer, motif_paiement, transaction_id, 
-                                 payment_status, total_annuel) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'success', ?)");
+                            (matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, 
+                             classe_eleve, nom_parent, adresse_eleve, montant_payer, motif_paiement, transaction_id, 
+                             payment_status, total_annuel) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'success', ?)");
 
         $stmt->bind_param(
-            "ssssssssss",
+            "ssssssssssss",
             $matricule,
             $nom_eleve,
             $postnom_eleve,
             $prenom_eleve,
             $sexe_eleve,
             $classe_eleve,
+            $nom_parent,
+            $adresse_eleve,
             $montant_payer_str,
             $motif_paiement,
             $transaction_id,
@@ -444,6 +447,42 @@ class AuthController
         } else {
             return ['success' => false, 'message' => "Erreur: " . $stmt->error];
         }
+    }
+    public function getStudentInfoByMatricule($matricule)
+    {
+        $conn = $this->conn;
+        $matricule = trim($matricule);
+
+        if (empty($matricule)) {
+            return ['success' => false, 'message' => 'Matricule non fourni'];
+        }
+
+        $stmt = $conn->prepare("SELECT nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, 
+                           classe_selection, nom_parent, adresse_eleve 
+                           FROM inscriptions WHERE matricule = ?");
+        if (!$stmt) {
+            return ['success' => false, 'message' => "Erreur SQL: " . $conn->error];
+        }
+
+        $stmt->bind_param("s", $matricule);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            return ['success' => false, 'message' => "Aucun élève trouvé avec ce matricule"];
+        }
+
+        $row = $result->fetch_assoc();
+        return [
+            'success' => true,
+            'nom_eleve' => $row['nom_eleve'],
+            'postnom_eleve' => $row['postnom_eleve'],
+            'prenom_eleve' => $row['prenom_eleve'],
+            'sexe_eleve' => $row['sexe_eleve'],
+            'classe_selection' => $row['classe_selection'],
+            'nom_parent' => $row['nom_parent'],
+            'adresse_eleve' => $row['adresse_eleve']
+        ];
     }
     public function rechercherEleveParMatricule($matricule)
     {
@@ -532,15 +571,15 @@ class AuthController
 
     }
     // INSCRIPTION DES ELEVES
-    public function enregistrerEleve($nom, $postnom, $prenom, $sexe, $classe, $annee)
+    public function enregistrerEleve($nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee)
     {
         $conn = $this->conn;
 
-        $stmt = $conn->prepare("INSERT INTO inscriptions (nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, annee_inscription) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO inscriptions (nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, nom_parent, adresse_eleve, annee_inscription) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if (!$stmt) {
             return ['success' => false, 'message' => "Erreur SQL préparation : " . $conn->error];
         }
-        $stmt->bind_param("ssssss", $nom, $postnom, $prenom, $sexe, $classe, $annee);
+        $stmt->bind_param("ssssssss", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee);
 
         if ($stmt->execute()) {
             $lastId = $conn->insert_id;
@@ -561,15 +600,15 @@ class AuthController
         }
     }
 
-    public function modifierEleve($id, $nom, $postnom, $prenom, $sexe, $classe, $annee)
+    public function modifierEleve($id, $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee)
     {
         $conn = $this->conn;
 
-        $stmt = $conn->prepare("UPDATE inscriptions SET nom_eleve=?, postnom_eleve=?, prenom_eleve=?, sexe_eleve=?, classe_selection=?, annee_inscription=? WHERE id=?");
+        $stmt = $conn->prepare("UPDATE inscriptions SET nom_eleve=?, postnom_eleve=?, prenom_eleve=?, sexe_eleve=?, classe_selection=?, nom_parent=?, adresse_eleve=?, annee_inscription=? WHERE id=?");
         if (!$stmt) {
             return ['success' => false, 'message' => "Erreur SQL préparation modification : " . $conn->error];
         }
-        $stmt->bind_param("ssssssi", $nom, $postnom, $prenom, $sexe, $classe, $annee, $id);
+        $stmt->bind_param("ssssssssi", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $id);
 
         if ($stmt->execute()) {
             $annee_suffix = substr($annee, -2);
@@ -587,6 +626,7 @@ class AuthController
             return ['success' => false, 'message' => "Erreur lors de la modification: " . $stmt->error];
         }
     }
+
 
     public function supprimerEleveParMatricule($matricule)
     {
