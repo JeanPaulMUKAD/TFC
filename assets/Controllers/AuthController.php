@@ -1,7 +1,7 @@
 <?php
 class AuthController
 {
-    private $conn;
+    public $conn;
 
     public function __construct()
     {
@@ -718,6 +718,8 @@ class AuthController
     {
         $this->conn->close();
     }
+
+    
 }
 
 // Gestion des requêtes AJAX

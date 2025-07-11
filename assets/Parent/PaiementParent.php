@@ -3,6 +3,20 @@
     require_once __DIR__ . '/../Controllers/AuthController.php';
     $auth = new AuthController();
 
+    // Récupérer dynamiquement les types de paiement via AuthController
+    $typesPaiement = [];
+    try {
+        $sql = "SELECT id, nom_type FROM payementtype";
+        $result = $auth->conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $typesPaiement[] = $row;
+            }
+        }
+    } catch (Exception $e) {
+        $typesPaiement = [];
+    }
+
     if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
         header('Content-Type: application/json');
         echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
@@ -320,11 +334,18 @@
 
                                                 <div class="mb-3">
                                                     <label for="motif_paiement" class="form-label">Motif du paiement
-                                                        <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="motif_paiement"
-                                                        name="motif_paiement" placeholder="Entrez le motif du paiement"
-                                                        required>
+                                                        <span class="text-danger">*</span>
+                                                    </label>
+                                                    <select class="form-control" id="motif_paiement" name="motif_paiement" required>
+                                                        <option value="">Sélectionnez le motif du paiement</option>
+                                                        <?php foreach ($typesPaiement as $type): ?>
+                                                            <option value="<?= htmlspecialchars($type['nom_type']) ?>">
+                                                                <?= htmlspecialchars($type['nom_type']) ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
                                                 </div>
+
                                                 <div class="mt-4">
                                                     <button type="button" onclick="checkout()"
                                                         class="btn btn-success w-100">Confirmer</button>

@@ -1,40 +1,54 @@
 <?php
-require_once __DIR__ . '/../Controllers/AuthController.php';
+    require_once __DIR__ . '/../Controllers/AuthController.php';
 
-$auth = new AuthController();
-$message = "";
+    $auth = new AuthController();
+    $message = "";
 
-// Gestion de la recherche par matricule (AJAX)
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
-    header('Content-Type: application/json');
-    echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
-    exit;
-}
-
-// Gestion des soumissions POST normales
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
-    $result = $auth->processCashPayment(
-        $_POST['matricule'] ?? '',
-        $_POST['nom_eleve'] ?? '',
-        $_POST['postnom_eleve'] ?? '',
-        $_POST['prenom_eleve'] ?? '',
-        $_POST['sexe_eleve'] ?? 'M',
-        $_POST['classe_eleve'] ?? '',
-        $_POST['nom_parent'] ?? '',
-        $_POST['adresse_eleve'] ?? '',
-        $_POST['montant_payer'] ?? '',
-        $_POST['devise1'] ?? '',
-        $_POST['devise'] ?? '',
-        $_POST['motif_paiement'] ?? '',
-        $_POST['total_annuel'] ?? ''
-    );
-
-    if ($result['success']) {
-        $message = "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
-    } else {
-        $message = "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
+    $typesPaiement = [];
+    try {
+        $sql = "SELECT id, nom_type FROM payementtype";
+        $result = $auth->conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $typesPaiement[] = $row;
+            }
+        }
+    } catch (Exception $e) {
+        $typesPaiement = [];
     }
-}
+
+
+    // Gestion de la recherche par matricule (AJAX)
+    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
+        header('Content-Type: application/json');
+        echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
+        exit;
+    }
+
+    // Gestion des soumissions POST normales
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
+        $result = $auth->processCashPayment(
+            $_POST['matricule'] ?? '',
+            $_POST['nom_eleve'] ?? '',
+            $_POST['postnom_eleve'] ?? '',
+            $_POST['prenom_eleve'] ?? '',
+            $_POST['sexe_eleve'] ?? 'M',
+            $_POST['classe_eleve'] ?? '',
+            $_POST['nom_parent'] ?? '',
+            $_POST['adresse_eleve'] ?? '',
+            $_POST['montant_payer'] ?? '',
+            $_POST['devise1'] ?? '',
+            $_POST['devise'] ?? '',
+            $_POST['motif_paiement'] ?? '',
+            $_POST['total_annuel'] ?? ''
+        );
+
+        if ($result['success']) {
+            $message = "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
+        } else {
+            $message = "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
+        }
+    }
 ?>
 
 
@@ -298,13 +312,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['local_payment'])) {
 
                                                     <div class="mb-3">
                                                         <label for="motif_paiement" class="form-label">Motif du paiement
-                                                            <span class="text-danger">*</span></label>
-                                                        <input type="text" class="form-control" id="motif_paiement"
-                                                            name="motif_paiement"
-                                                            placeholder="Entrez le motif du paiement" required>
-                                                        <div class="invalid-feedback">
-                                                            Veuillez entrer le motif du paiement.
-                                                        </div>
+                                                            <span class="text-danger">*</span>
+                                                        </label>
+                                                        <select class="form-control" id="motif_paiement" name="motif_paiement" required>
+                                                            <option value="">Sélectionnez le motif du paiement</option>
+                                                            <?php foreach ($typesPaiement as $type): ?>
+                                                                <option value="<?= htmlspecialchars($type['nom_type']) ?>">
+                                                                    <?= htmlspecialchars($type['nom_type']) ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
                                                     </div>
 
                                                     <div class="mt-4">
