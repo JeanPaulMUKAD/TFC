@@ -25,7 +25,7 @@
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="Themesbrand" name="author" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <link rel="shortcut icon" href="assets/images/logo_pp.png">
 
     <!-- Layout config Js -->
     <script src="assets/js/layout.js"></script>
@@ -56,11 +56,7 @@
                                     <div class="p-lg-5 p-4 auth-one-bg h-100">
                                         <div class="bg-overlay"></div>
                                         <div class="position-relative h-100 d-flex flex-column">
-                                            <div class="mb-4">
-                                                <a href="#" class="d-block">
-                                                    <img src="assets/images/login.png" alt="" height="50">
-                                                </a>
-                                            </div>
+                                            
                                             <div class="mt-auto">
                                                 <div class="mb-3">
                                                     <i class="ri-double-quotes-l display-4 text-success"></i>

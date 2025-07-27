@@ -1,162 +1,147 @@
+<?php
+require_once __DIR__ . '/../Controllers/AuthController.php';
+$auth = new AuthController();
+
+// Nombre d'utilisateurs inscrits ce mois
+$userCount = 0;
+$formatter = new IntlDateFormatter('fr_FR', IntlDateFormatter::LONG, IntlDateFormatter::NONE, 'Europe/Paris', IntlDateFormatter::GREGORIAN, 'LLLL yyyy');
+$mois = ucfirst($formatter->format(new DateTime()));
+
+$sql = "SELECT COUNT(*) as total FROM utilisateurs WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())";
+$result = $auth->conn->query($sql);
+if ($result && $row = $result->fetch_assoc()) {
+  $userCount = (int) $row['total'];
+}
+
+// Nombre total de types de paiement configurés
+$paymentCount = 0;
+$sql2 = "SELECT COUNT(*) as total FROM payementtype";
+$result2 = $auth->conn->query($sql2);
+if ($result2 && $row2 = $result2->fetch_assoc()) {
+  $paymentCount = (int) $row2['total'];
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Admin</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Admin | C.S.P.P.UNILU</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+  </style>
 </head>
-<body class="flex bg-gray-100 h-screen" style="font-family: 'Poppins', sans-serif";>
+
+<body class="bg-gray-100 text-gray-900">
 
   <!-- Sidebar -->
-  <aside class="w-64 bg-white shadow-md h-full p-6">
-    <h2 class="text-2xl font-bold mb-6 text-black">Admin</h2>
-    <nav class="space-y-4">
-      <a href="../Admin/Account_User.php" class="block text-gray-700 hover:text-orange-500 transition font-medium">Enregistrer un utilisateur</a>
-      <a href="../Admin/Payment_Type.php" class="block text-gray-700 hover:text-orange-500 transition font-medium">Configurer type de paiement</a>
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 text-white shadow-lg z-50">
+    <div class="p-6">
+      <div class="text-2xl font-bold">
+        <span class="text-white">C.S.P.P</span><span class="text-green-400">.UNILU</span>
+      </div>
+    </div>
+    <nav class="mt-10 space-y-4 px-4">
+      <a href="#" class="flex items-center space-x-3 text-white hover:text-green-400 transition">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Tableau de bord</span>
+      </a>
+      <a href="Account_User.php" class="flex items-center space-x-3 text-white hover:text-green-400 transition">
+        <i class="fas fa-users"></i>
+        <span>Gérer utilisateurs</span>
+      </a>
+      <a href="Payment_Type.php" class="flex items-center space-x-3 text-white hover:text-green-400 transition">
+        <i class="fas fa-cogs"></i>
+        <span>Types de paiement</span>
+      </a>
+      <a href="#" class="flex items-center space-x-3 text-white hover:text-red-400 transition mt-8">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Se déconnecter</span>
+      </a>
     </nav>
   </aside>
 
-  <!-- Contenu principal -->
-  <main class="flex-1 p-8 overflow-auto">
-    <h1 class="text-3xl font-bold mb-6">Tableau de bord</h1>
+  <!-- Main content -->
+  <div class="ml-64 min-h-screen p-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold">Bienvenue, <?php echo $_SESSION['username'] ?></h1>
+      <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">Espace sécurisé</span>
+    </div>
 
-    <!-- Cartes -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-lg font-semibold mb-2">Utilisateurs enregistrés ce mois</h2>
-        <p id="userCount" class="text-4xl text-orange-600 font-bold">0</p>
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-2xl transition">
+        <div class="flex items-center space-x-4">
+          <div class="text-4xl text-green-500"><i class="fas fa-users"></i></div>
+          <div>
+            <h2 class="text-sm text-gray-500">Utilisateurs inscrits</h2>
+            <p class="text-2xl font-bold text-gray-800"><?= $userCount ?></p>
+            <p class="text-xs text-gray-400">En <strong><?= $mois ?></strong></p>
+          </div>
+        </div>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-lg font-semibold mb-2">Configurations de paiements ce mois</h2>
-        <p id="paymentCount" class="text-4xl text-orange-600 font-bold">0</p>
+
+      <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-2xl transition">
+        <div class="flex items-center space-x-4">
+          <div class="text-4xl text-emerald-500"><i class="fas fa-cogs"></i></div>
+          <div>
+            <h2 class="text-sm text-gray-500">Types de paiement</h2>
+            <p class="text-2xl font-bold text-gray-800"><?= $paymentCount ?></p>
+            <p class="text-xs text-gray-400">Configurés</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-2xl transition">
+        <div class="flex items-center space-x-4">
+          <div class="text-4xl text-blue-500"><i class="fas fa-check-double"></i></div>
+          <div>
+            <h2 class="text-sm text-gray-500">Suivi des opérations</h2>
+            <p class="text-2xl font-bold text-gray-800">Actif</p>
+            <p class="text-xs text-gray-400">Transparence assurée</p>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Graphique -->
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-lg font-semibold mb-4">Activités mensuelles</h2>
-      <canvas id="activityChart" height="100"></canvas>
+    <!-- Boutons d'action -->
+    <div class="mt-10 flex flex-wrap gap-4">
+      <a href="Account_User.php"
+        class="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-emerald-600 hover:to-green-500 text-white py-3 px-6 rounded-full text-sm font-semibold flex items-center gap-2 shadow">
+        <i class="fas fa-user-plus"></i>
+        Gérer les utilisateurs
+      </a>
+
+      <a href="Payment_Type.php"
+        class="bg-white text-green-700 border border-green-500 hover:bg-gray-50 py-3 px-6 rounded-full text-sm font-semibold flex items-center gap-2 shadow">
+        <i class="fas fa-cogs"></i>
+        Configurer les types de paiement
+      </a>
     </div>
-  </main>
 
-  <script>
-    // Exemple dynamique (doit être remplacé par tes données PHP via AJAX ou JSON)
-    const labels = ['Jan', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil'];
-    const userActivity = [2, 5, 3, 4, 6, 8, 3];
-    const paymentActivity = [1, 2, 2, 5, 3, 7, 2];
-
-    document.getElementById('userCount').textContent = userActivity[userActivity.length - 1];
-    document.getElementById('paymentCount').textContent = paymentActivity[paymentActivity.length - 1];
-
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Utilisateurs enregistrés',
-            data: userActivity,
-            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-          },
-          {
-            label: 'Types de paiements configurés',
-            data: paymentActivity,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-  </script>
-
-   <!-- SEARCH LOGO -->
-    <script>
-        let a = 0;
-        let masque = document.createElement('div');
-        let logo = document.createElement('img');
-        let cercle = document.createElement('div');
-
-        let angle = 0;
-        let scale = 1;
-        let opacityLogo = 1;
-
-        window.addEventListener('load', () => {
-            a = 1;
-
-            // Le cercle et le logo commencent à bouger immédiatement
-            anime = setInterval(() => {
-                angle += 10; // Vitesse de rotation du cercle
-                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-
-                // Zoom progressif du logo
-                scale += 0.005;
-                opacityLogo -= 0.005;
-
-                logo.style.transform = `scale(${scale})`;
-                logo.style.opacity = opacityLogo;
-
-            }, 20);
-
-            // Après 1 seconde, on arrête l'animation
-            setTimeout(() => {
-                clearInterval(anime);
-                masque.style.opacity = '0';
-            }, 1000);
-
-            setTimeout(() => {
-                masque.style.visibility = 'hidden';
-            }, 1500);
-        });
-
-        // Création du masque
-        masque.style.width = '100%';
-        masque.style.height = '100vh';
-        masque.style.zIndex = 100000;
-        masque.style.background = '#ffffff';
-        masque.style.position = 'fixed';
-        masque.style.top = '0';
-        masque.style.left = '0';
-        masque.style.opacity = '1';
-        masque.style.transition = '0.5s ease';
-        masque.style.display = 'flex';
-        masque.style.justifyContent = 'center';
-        masque.style.alignItems = 'center';
-        document.body.appendChild(masque);
-
-        // Création du logo
-        logo.setAttribute('src', '../images/logo_pp.png');
-        logo.style.width = '10vh';
-        logo.style.height = '10vh';
-        logo.style.position = 'relative';
-        logo.style.zIndex = '2';
-        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
-        masque.appendChild(logo);
-
-        // Création du cercle autour du logo
-        cercle.style.width = '15vh';
-        cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #0ab39c';
-        cercle.style.borderTop = '3px solid #405189';
-        cercle.style.borderRadius = '50%';
-        cercle.style.position = 'absolute';
-        cercle.style.top = '50%';
-        cercle.style.left = '50%';
-        cercle.style.transform = 'translate(-50%, -50%)';
-        cercle.style.boxSizing = 'border-box';
-        cercle.style.zIndex = '1';
-        masque.appendChild(cercle);
-
-        // Variables de l'animation
-        let anime;
-
-    </script>
+    <!-- Infos -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-lock text-green-400"></i>
+        <span>Connexion sécurisée</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fas fa-database text-green-400"></i>
+        <span>Données en temps réel</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fas fa-bullseye text-green-400"></i>
+        <span>Gestion centralisée</span>
+      </div>
+    </div>
+  </div>
 </body>
+
 </html>

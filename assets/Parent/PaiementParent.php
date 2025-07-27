@@ -1,41 +1,39 @@
 <?php
-    $message = "";
-    require_once __DIR__ . '/../Controllers/AuthController.php';
-    $auth = new AuthController();
+$message = "";
+require_once __DIR__ . '/../Controllers/AuthController.php';
+$auth = new AuthController();
 
-    // Récupérer dynamiquement les types de paiement via AuthController
+// Récupérer dynamiquement les types de paiement via AuthController
+$typesPaiement = [];
+try {
+    $sql = "SELECT id, nom_type FROM payementtype";
+    $result = $auth->conn->query($sql);
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $typesPaiement[] = $row;
+        }
+    }
+} catch (Exception $e) {
     $typesPaiement = [];
-    try {
-        $sql = "SELECT id, nom_type FROM payementtype";
-        $result = $auth->conn->query($sql);
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $typesPaiement[] = $row;
-            }
-        }
-    } catch (Exception $e) {
-        $typesPaiement = [];
-    }
+}
 
-    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
+    header('Content-Type: application/json');
+    echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Si c'est une requête AJAX pour le rapport
+    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
         header('Content-Type: application/json');
-        echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
+        echo json_encode($auth->handlePaymentAndReport($_POST));
         exit;
+    } else {
+        $response = $auth->handlePaymentAndReport($_POST);
+        $message = $response['message'];
     }
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        // Si c'est une requête AJAX pour le rapport
-        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
-            header('Content-Type: application/json');
-            echo json_encode($auth->handlePaymentAndReport($_POST));
-            exit;
-        }
-
-        else {
-            $response = $auth->handlePaymentAndReport($_POST);
-            $message = $response['message'];
-        }
-    }
+}
 ?>
 
 <!doctype html>
@@ -70,28 +68,38 @@
 
     <script>
         function checkout() {
-            // Champs du formulaire
+
+
+            let matricule = document.getElementById("matricule").value.trim();
             let nomEleve = document.getElementById("nom_eleve").value.trim();
-            let classe = document.getElementById("classe_selection").value;
+            let postnomEleve = document.getElementById("postnom_eleve").value.trim();
+            let prenomEleve = document.getElementById("prenom_eleve").value.trim();
+            let sexeEleve = document.getElementById("sexe_eleve").value;
+            let classe = document.getElementById("classe_eleve").value;
+            let nomParent = document.querySelector('input[name="nom_parent"]').value.trim();
+            let adresseEleve = document.querySelector('input[name="adresse_eleve"]').value.trim();
             let montant = document.getElementById("montant_payer").value.trim();
             let devise = document.getElementById("devise").value;
             let motif = document.getElementById("motif_paiement").value.trim();
             let errorDiv = document.getElementById("form-error-message");
             errorDiv.innerHTML = "";
 
-            if (!nomEleve || !classe || !montant || !devise || !motif || parseFloat(montant) <= 0) {
+
+
+            if (!matricule || !nomEleve || !postnomEleve || !prenomEleve || !sexeEleve || !classe || !nomParent || !adresseEleve || !montant || !devise || !motif || parseFloat(montant) <= 0) {
                 errorDiv.innerHTML = "Veuillez remplir tous les champs obligatoires correctement avant de confirmer le paiement.";
                 return;
             }
 
-            // Génération d’un ID unique pour transaction
+            
             let transactionId = Math.floor(Math.random() * 100000000).toString();
-            document.getElementById('transaction_id').value = transactionId;
+          
+
 
             CinetPay.setConfig({
-                apikey: '75056871567c071de82e830.17896805',
-                site_id: '105899604',
-                notify_url: 'http://localhost:8080/assets/Paiements/PaiementParent.php',
+                apikey: '137270109768837fd94f8549.16939776',
+                site_id: '105903173',
+                notify_url: 'http://localhost:8080/assets/Parent/PaiementParent.php',
                 mode: 'PRODUCTION'
             });
 
@@ -101,10 +109,10 @@
                 currency: devise === '$' ? 'USD' : 'CDF',
                 channels: 'ALL',
                 description: motif,
-                customer_name: nomEleve,
+                customer_name: nomEleve + " " + postnomEleve + " " + prenomEleve,
                 customer_email: "mukadjeanpaul@gmail.com",
                 customer_phone_number: "0977199714",
-                customer_address: "Adresse",
+                customer_address: adresseEleve,
                 customer_city: "Lubumbashi",
                 customer_country: "CD",
                 customer_state: "Haut-Katanga",
@@ -125,7 +133,6 @@
                 }
             });
         }
-
     </script>
 
 
@@ -205,7 +212,7 @@
                                         <div id="form-error-message" class="text-danger mb-3 fw-semibold"></div>
                                         <div class="mt-4">
                                             <form class="needs-validation" novalidate method="POST">
-
+                                              
                                                 <input type="hidden" name="local_payment" value="1">
                                                 <input type="hidden" name="payment_validated" id="payment_validated"
                                                     value="0">
@@ -303,13 +310,15 @@
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label for="nom_parent" class="form-control">Nom du parent<span class="text-danger">*</span></label>
+                                                    <label for="nom_parent" class="form-control">Nom du parent<span
+                                                            class="text-danger">*</span></label>
                                                     <input type="text" name="nom_parent" class="form-control"
                                                         placeholder="Entrez le nom du parent(tuteur) de l'eleve"
                                                         required>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label for="adresse_eleve" class="form_control">Adresse<span class="text-danger">*</span></label>
+                                                    <label for="adresse_eleve" class="form_control">Adresse<span
+                                                            class="text-danger">*</span></label>
                                                     <input type="text" name="adresse_eleve" class="form-control"
                                                         placeholder="Entrez l'adresse de l'eleve" required>
                                                 </div>
@@ -336,7 +345,8 @@
                                                     <label for="motif_paiement" class="form-label">Motif du paiement
                                                         <span class="text-danger">*</span>
                                                     </label>
-                                                    <select class="form-control" id="motif_paiement" name="motif_paiement" required>
+                                                    <select class="form-control" id="motif_paiement"
+                                                        name="motif_paiement" required>
                                                         <option value="">Sélectionnez le motif du paiement</option>
                                                         <?php foreach ($typesPaiement as $type): ?>
                                                             <option value="<?= htmlspecialchars($type['nom_type']) ?>">
@@ -355,71 +365,6 @@
 
                                             <hr class="my-4">
 
-                                            <script>
-                                                document.getElementById('toggleReportForm').addEventListener('click', function () {
-                                                    let form = document.getElementById('reportForm');
-                                                    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-
-                                                    if (form.style.display === 'none') {
-                                                        document.getElementById('reportResults').style.display = 'none';
-                                                    }
-                                                });
-
-                                                document.getElementById('fetchReportForm').addEventListener('submit', function (e) {
-                                                    e.preventDefault();
-
-                                                    let nomEleve = document.getElementById('nom_eleve_report').value.trim();
-                                                    let classe = document.getElementById('classe_report').value;
-
-                                                    if (!nomEleve || !classe) {
-                                                        alert("Veuillez remplir tous les champs pour la recherche.");
-                                                        return;
-                                                    }
-
-                                                    fetch(window.location.href, {
-                                                        method: 'POST',
-                                                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                        body: new URLSearchParams({
-                                                            action: 'fetch_report',
-                                                            nom_eleve_report: nomEleve,
-                                                            classe_report: classe
-                                                        })
-                                                    })
-                                                        .then(response => response.json())
-                                                        .then(data => {
-                                                            if (data.success) {
-                                                                let tbody = document.getElementById('reportBody');
-                                                                tbody.innerHTML = '';
-
-                                                                if (data.payments.length === 0) {
-                                                                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun paiement trouvé pour cet élève et cette classe.</td></tr>';
-                                                                } else {
-                                                                    data.payments.forEach(p => {
-                                                                        tbody.innerHTML += `
-                                                                        <tr>
-                                                                            <td>${parseFloat(p.montant_payer).toFixed(2)}</td>
-                                                                            <td>${p.motif_paiement}</td>
-                                                                            <td>${p.transaction_id}</td>
-                                                                            <td>${p.payment_status}</td>
-                                                                            <td>${p.classe_eleve}</td>
-                                                                            <td>${parseFloat(p.total_annuel).toFixed(2)}</td>
-                                                                            <td>${parseFloat(p.reste_a_payer).toFixed(2)}</td>
-                                                                            
-                                                                        </tr>
-                                                                    `;
-                                                                    });
-                                                                }
-                                                                document.getElementById('reportResults').style.display = 'block';
-                                                            } else {
-                                                                alert("Erreur lors de la récupération des données.");
-                                                            }
-                                                        })
-                                                        .catch(error => {
-                                                            console.error("Erreur AJAX:", error);
-                                                            alert("Une erreur est survenue lors de la requête.");
-                                                        });
-                                                });
-                                            </script>
 
 
 

@@ -260,6 +260,7 @@ class AuthController
         // Récupération sécurisée des données
         $conn = $this->conn;
 
+        // Rapport de paiement
         if (isset($postData['action']) && $postData['action'] === 'fetch_report') {
             $nom_eleve_report = $conn->real_escape_string($postData['nom_eleve_report'] ?? '');
             $classe_report = $conn->real_escape_string($postData['classe_report'] ?? '');
@@ -276,8 +277,8 @@ class AuthController
 
             // récupérer les paiements
             $sql_report = "SELECT montant_payer, motif_paiement, transaction_id, payment_status, classe_eleve 
-                       FROM paiement 
-                       WHERE nom_eleve = '$nom_eleve_report' AND classe_eleve = '$classe_report'";
+                   FROM paiement 
+                   WHERE nom_eleve = '$nom_eleve_report' AND classe_eleve = '$classe_report'";
 
             $result_report = $conn->query($sql_report);
 
@@ -295,34 +296,44 @@ class AuthController
 
         if (isset($postData['local_payment'])) {
             if (isset($postData['payment_validated']) && $postData['payment_validated'] == "1") {
+                $matricule = $conn->real_escape_string($postData['matricule'] ?? '');
                 $nom_eleve = $conn->real_escape_string($postData['nom_eleve'] ?? '');
-                $classe_selection = $conn->real_escape_string($postData['classe_selection'] ?? '');
+                $postnom_eleve = $conn->real_escape_string($postData['postnom_eleve'] ?? '');
+                $prenom_eleve = $conn->real_escape_string($postData['prenom_eleve'] ?? '');
+                $sexe_eleve = $conn->real_escape_string($postData['sexe_eleve'] ?? '');
+                $classe_eleve = $conn->real_escape_string($postData['classe_eleve'] ?? '');
+                $nom_parent = $conn->real_escape_string($postData['nom_parent'] ?? '');
+                $adresse_eleve = $conn->real_escape_string($postData['adresse_eleve'] ?? '');
                 $montant_payer = (float) ($postData['montant_payer'] ?? 0);
                 $devise = $conn->real_escape_string($postData['devise'] ?? '');
                 $motif_paiement = $conn->real_escape_string($postData['motif_paiement'] ?? '');
                 $transaction_id = $conn->real_escape_string($postData['transaction_id'] ?? '');
 
-                // Vérifier le total annuel
-                $sql_total = "SELECT total_annuel FROM paiement WHERE classe_eleve = '$classe_selection' LIMIT 1";
-                $result_total = $conn->query($sql_total);
-                $total_annuel = ($result_total && $result_total->num_rows > 0) ? (float) $result_total->fetch_assoc()['total_annuel'] : 0;
+                
+            $sql_total = "SELECT total_annuel FROM paiement WHERE classe_eleve = '$classe_eleve' LIMIT 1";
+            $result_total = $conn->query($sql_total);
+            $total_annuel = ($result_total && $result_total->num_rows > 0) ? (float) $result_total->fetch_assoc()['total_annuel'] : 0;
 
-                // Calculer le montant déjà payé
-                $sql_deja_paye = "SELECT SUM(montant_payer) as total_paye FROM paiement WHERE nom_eleve = '$nom_eleve' AND classe_selection = '$classe_selection'";
-                $result_paye = $conn->query($sql_deja_paye);
-                $total_paye = ($result_paye && $result_paye->num_rows > 0) ? (float) $result_paye->fetch_assoc()['total_paye'] : 0;
+            // Calculer le montant déjà payé
+            $sql_deja_paye = "SELECT SUM(montant_payer) as total_paye FROM paiement WHERE nom_eleve = '$nom_eleve' AND classe_eleve = '$classe_eleve'";
+            $result_paye = $conn->query($sql_deja_paye);
+            $total_paye = ($result_paye && $result_paye->num_rows > 0) ? (float) $result_paye->fetch_assoc()['total_paye'] : 0;
 
-                $nouveau_total_paye = $total_paye + $montant_payer;
-                $reste_a_payer = $total_annuel - $nouveau_total_paye;
+            $nouveau_total_paye = $total_paye + $montant_payer;
+            $reste_a_payer = $total_annuel - $nouveau_total_paye;
 
-                $sql = "INSERT INTO paiement (nom_eleve, classe_eleve, montant_payer, motif_paiement, transaction_id, payment_status, classe_selection, total_annuel)
-                    VALUES ('$nom_eleve', '$classe_selection', '$montant_payer', '$motif_paiement', '$transaction_id', 'success', '$classe_selection', '$total_annuel')";
-
-                if ($conn->query($sql) === TRUE) {
-                    return ['success' => true, 'message' => "Paiement enregistré avec succès."];
-                } else {
-                    return ['success' => false, 'message' => "Erreur lors de l'enregistrement du paiement : " . $conn->error];
-                }
+            $sql = "INSERT INTO paiement (
+                        matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_eleve, nom_parent, adresse_eleve,
+                        montant_payer, devise, motif_paiement, transaction_id, payment_status, total_annuel
+                    ) VALUES (
+                        '$matricule', '$nom_eleve', '$postnom_eleve', '$prenom_eleve', '$sexe_eleve', '$classe_eleve', '$nom_parent', '$adresse_eleve',
+                        '$montant_payer', '$devise', '$motif_paiement', '$transaction_id', 'success', '$total_annuel'
+                    )";
+             if ($conn->query($sql) === TRUE) {
+                return ['success' => true, 'message' => "Paiement enregistré avec succès."];
+            }else {
+                return ['success' => false, 'message' => "Le paiement n'a pas été validé. Veuillez réessayer."];
+            }
             } else {
                 return ['success' => false, 'message' => "Le paiement n'a pas été validé. Veuillez réessayer."];
             }
@@ -719,7 +730,7 @@ class AuthController
         $this->conn->close();
     }
 
-    
+
 }
 
 // Gestion des requêtes AJAX
