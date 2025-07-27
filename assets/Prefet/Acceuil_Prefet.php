@@ -450,7 +450,7 @@
     }
 
     function exportToPDF(matricule) {
-      window.open(`export_pdf.php?matricule=${encodeURIComponent(matricule)}`, '_blank');
+      window.open(`/export_pdf.php?matricule=${encodeURIComponent(matricule)}`, '_blank');
     }
 
   </script>
