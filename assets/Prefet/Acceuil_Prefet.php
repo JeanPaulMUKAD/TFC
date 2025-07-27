@@ -450,8 +450,9 @@
     }
 
     function exportToPDF(matricule) {
-      alert("Export PDF pour le matricule: " + matricule + "\nCette fonctionnalité sera implémentée prochainement.");
+      window.open(`export_pdf.php?matricule=${encodeURIComponent(matricule)}`, '_blank');
     }
+
   </script>
 
   <!-- SEARCH LOGO -->
