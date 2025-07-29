@@ -1,19 +1,39 @@
 <?php
-    require_once '../Controllers/AuthController.php';
-    $auth = new AuthController();
-    $messageErreur = null;
+require_once '../Controllers/AuthController.php';
+$auth = new AuthController();
+$messageErreur = null;
+$paiementsEnfants = []; // Initialisez un tableau pour stocker les paiements
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        header('Content-Type: application/json');
-        $matricule = htmlspecialchars(trim($_POST['matricule']));
+// TODO: REMPLACER PAR LE NOM DU PARENT AUTHENTIFIÉ
+// Pour l'exemple, nous allons simuler un parent connecté.
+// En réalité, vous devriez récupérer le nom du parent à partir de votre session d'authentification.
+$nom_parent_connecte = "NomDuParentConnecte"; // <<< REMPLACEZ CECI PAR LE VRAI NOM DU PARENT DE LA SESSION
 
-        if (isset($_POST['action']) && $_POST['action'] === 'get_paiements') {
-            $resultat = $auth->obtenirPaiementsParMatricule($matricule);
-        }
+if ($nom_parent_connecte) {
+    $resultatPaiements = $auth->obtenirPaiementsParNomParent($nom_parent_connecte);
+    if ($resultatPaiements['success']) {
+        $paiementsEnfants = $resultatPaiements['payments'];
+    } else {
+        $messageErreur = $resultatPaiements['message'];
+    }
+} else {
+    $messageErreur = "Veuillez vous connecter pour voir les informations de paiement.";
+}
 
-        echo json_encode($resultat);
+// Pour gérer les requêtes AJAX pour les rapports (si vous voulez toujours cette fonctionnalité, mais elle n'est plus basée sur le matricule)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report_by_parent') {
+        // Cette section peut être adaptée si vous voulez une recherche plus granulaire
+        // pour un enfant spécifique du parent, par exemple par nom d'enfant ou classe.
+        // Pour l'instant, on se base sur le nom du parent déjà récupéré.
+        echo json_encode(['success' => true, 'payments' => $paiementsEnfants]);
         exit;
     }
+    echo json_encode(['success' => false, 'message' => 'Action non reconnue.']);
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -36,7 +56,6 @@
 
 <body class="bg-gray-50 text-black">
 
-    <!-- Navbar -->
     <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white shadow-md">
         <div class="text-2xl font-bold">
             <span class="text-black">C.S.P.P</span><span class="text-indigo-500 font-extrabold">.UNILU</span>
@@ -50,18 +69,15 @@
         </div>
     </nav>
 
-    <!-- Section Parent -->
     <section class="relative px-4 py-10 bg-white pt-28">
         <div
             class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-black text-white min-h-[100vh] flex items-center justify-center shadow-2xl">
 
-            <!-- Dégradés -->
             <div class="absolute top-0 left-0 w-64 h-64 bg-indigo-800 rounded-full opacity-20 blur-3xl"></div>
             <div class="absolute top-0 right-0 w-64 h-64 bg-blue-700 rounded-full opacity-20 blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-700 rounded-full opacity-20 blur-3xl"></div>
             <div class="absolute bottom-0 right-0 w-64 h-64 bg-indigo-800 rounded-full opacity-20 blur-3xl"></div>
 
-            <!-- Contenu -->
             <div class="relative z-10 max-w-4xl w-full text-center space-y-6 p-8">
                 <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full bg-white/10 text-white">
                     <span class="text-green-500">● </span>ESPACE DU PARENT
@@ -91,7 +107,6 @@
                     </a>
                 </div>
 
-                <!-- Infos -->
                 <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-300">
                     <div class="flex items-center justify-center space-x-2">
                         <i class="fas fa-check-circle text-indigo-400"></i>
@@ -110,10 +125,8 @@
         </div>
     </section>
 
-    <!-- Section explicative -->
     <section class="bg-white py-20 px-6">
         <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <!-- Texte -->
             <div>
                 <h2 class="text-4xl font-extrabold text-gray-900 mb-4">
                     Paiement des frais scolaires
@@ -130,34 +143,79 @@
                 </ul>
 
                 <div class="mt-8">
-                    <button id="reportButton"class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold py-3 px-6 rounded-full hover:from-indigo-600 hover:to-blue-600 transition">
+                    <button id="showPaymentsButton"
+                        class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold py-3 px-6 rounded-full hover:from-indigo-600 hover:to-blue-600 transition">
                         <i class="fas fa-chart-bar text-white"></i>
-                        <span>Voir rapports de paiements</span>
+                        <span>Voir les paiements de mes enfants</span>
                     </button>
                 </div>
-                <!-- Formulaire pour les rapports de paiements -->
-                <div id="reportForm" class="hidden mt-8 bg-white/10 p-6 rounded-xl backdrop-blur-sm">
-                    <form id="reportSearchForm" class="space-y-4">
-                        <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
-                        <div class="w-full md:w-auto">
-                            <label for="reportMatricule" class="block text-sm font-medium text-white mb-1">Matricule</label>
-                            <input type="text" id="reportMatricule" name="reportMatricule" required
-                            class="w-full px-4 py-2 border font-normal border-gray-300 rounded-lg text-black"
-                            placeholder="Entrez le matricule">
+
+                <div id="paiementsTableContainer" class="hidden mt-8 bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Historique des paiements de vos enfants</h3>
+                    <?php if (!empty($paiementsEnfants)): ?>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom
+                                            Enfant</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date
+                                            Paiement</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant
+                                            Payé</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total
+                                            Annuel</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total
+                                            Payé (Enfant/Classe)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reste à
+                                            Payer</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white text-gray-700 divide-y divide-gray-200">
+                                    <?php foreach ($paiementsEnfants as $paiement): ?>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= htmlspecialchars($paiement['nom_eleve'] . ' ' . $paiement['postnom_eleve'] . ' ' . $paiement['prenom_eleve']) ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= htmlspecialchars($paiement['classe_eleve']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= htmlspecialchars($paiement['date_paiement']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= number_format($paiement['montant_payer'], 2) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= htmlspecialchars($paiement['motif_paiement']) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= number_format($paiement['total_annuel_classe'], 2) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= number_format($paiement['total_paye_enfant_classe'], 2) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <?= number_format($paiement['reste_a_payer'], 2) ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span
+                                                    class="px-2 py-1 text-xs rounded-full <?= $paiement['payment_status'] === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
+                                                    <?= $paiement['payment_status'] === 'success' ? 'Payé' : 'Échoué' ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
-                        <button type="submit"
-                            class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 h-10 mt-5 md:mt-0">
-                            <i class="fas fa-search mr-2"></i> Chercher
-                        </button>
-                        </div>
-                    </form>
-                    <div id="paiementsResult" class="mt-6"></div>
+                    <?php else: ?>
+                        <p class="text-gray-600">
+                            <?php echo $messageErreur ?: "Aucun paiement trouvé pour vos enfants."; ?>
+                        </p>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            
-
-            <!-- Image -->
             <div class="flex justify-center">
                 <img src="../images/Eleve.png" alt="Paiement élève" class="rounded-lg ">
             </div>
@@ -165,90 +223,22 @@
     </section>
 
     <script>
-        // Afficher/Masquer le formulaire des rapports
-        document.getElementById('reportButton').addEventListener('click', function () {
-            const form = document.getElementById('reportForm');
-            form.classList.toggle('hidden');
-        });
+        document.addEventListener('DOMContentLoaded', function () {
+            const showPaymentsButton = document.getElementById('showPaymentsButton');
+            const paymentsTableContainer = document.getElementById('paiementsTableContainer');
 
-        // Traitement du formulaire des rapports de paiements
-        document.getElementById('reportSearchForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const matricule = document.getElementById('reportMatricule').value;
-            const resultDiv = document.getElementById('paiementsResult');
-
-            resultDiv.innerHTML = `<p class="text-gray-500">Recherche en cours...</p>`;
-
-            try {
-                const response = await fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `matricule=${encodeURIComponent(matricule)}&action=get_paiements`
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    let rows = '';
-                    data.paiements.forEach(paiement => {
-                        rows += `
-                            <tr class="border-b">
-                                <td class="px-4 py-2">${paiement.nom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.postnom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.prenom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}</td>
-                                <td class="px-4 py-2">${paiement.date_paiement}</td>
-                                <td class="px-4 py-2">${paiement.montant_payer}</td>
-                                <td class="px-4 py-2">${paiement.motif_paiement}</td>
-                                <td class="px-4 py-2">${paiement.classe_eleve}</td>
-                                <td class="px-4 py-2">${paiement.nom_parent}</td>
-                                <td class="px-4 py-2">${paiement.adresse_eleve}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs rounded-full ${paiement.payment_status === 'success'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                    }">
-                                    ${paiement.payment_status === 'success' ? 'Payé' : 'Échoué'}
-                                    </span>
-                                </td>
-                            </tr>
-                        `;
-                    });
-
-                    resultDiv.innerHTML = `
-                        <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg mt-4">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Post-Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom parent</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adresse</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white text-black">
-                                ${rows}
-                            </tbody>
-                        </table>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `<p class="text-red-500 font-semibold">${data.message}</p>`;
+            showPaymentsButton.addEventListener('click', function () {
+                paymentsTableContainer.classList.toggle('hidden');
+                // Vous pouvez ajouter un défilement doux vers le tableau si désiré
+                if (!paymentsTableContainer.classList.contains('hidden')) {
+                    paymentsTableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-            } catch (error) {
-                resultDiv.innerHTML = `<p class="text-red-500 font-semibold">Erreur lors de la requête.</p>`;
-            }
+            });
         });
     </script>
 
-     <!-- SEARCH LOGO -->
+
+    <!-- SEARCH LOGO -->
     <script>
         let a = 0;
         let masque = document.createElement('div');
