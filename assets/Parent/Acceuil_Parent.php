@@ -1,19 +1,68 @@
 <?php
-    require_once '../Controllers/AuthController.php';
-    $auth = new AuthController();
-    $messageErreur = null;
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        header('Content-Type: application/json');
-        $matricule = htmlspecialchars(trim($_POST['matricule']));
+require_once '../Controllers/AuthController.php';
+$auth = new AuthController();
+$messageErreur = null;
 
-        if (isset($_POST['action']) && $_POST['action'] === 'get_paiements') {
+
+$loggedInParentName = $_SESSION['username'] ?? '';
+
+// --- Bloc UNIQUE pour toutes les requêtes POST (y compris AJAX) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $resultat = ['success' => false, 'message' => 'Action non traitée.']; // Valeur par défaut
+
+    // Déterminez l'action demandée
+    $action = $_POST['action'] ?? '';
+
+    error_log("Requête POST reçue dans Acceuil_Parent.php. Action: " . $action);
+    error_log("POST data: " . print_r($_POST, true));
+
+    // --- Cas de l'action 'get_paiements' (pour matricule, si toujours utilisée) ---
+    // (Conservez ce bloc si vous utilisez encore cette action, sinon, vous pouvez l'enlever)
+    if ($action === 'get_paiements') {
+        if (isset($_POST['matricule'])) {
+            $matricule = htmlspecialchars(trim($_POST['matricule']));
+            // Assurez-vous que AuthController a bien une méthode obtenirPaiementsParMatricule si vous l'utilisez
             $resultat = $auth->obtenirPaiementsParMatricule($matricule);
+            error_log("Résultat de obtenirPaiementsParMatricule: " . json_encode($resultat));
+        } else {
+            $resultat = ['success' => false, 'message' => 'Matricule manquant pour get_paiements.'];
+            error_log("Erreur: Matricule manquant.");
         }
-
-        echo json_encode($resultat);
-        exit;
     }
+    // --- Cas de l'action 'get_paiements_by_parent' (pour le parent connecté) ---
+    elseif ($action === 'get_paiements_by_parent') {
+        // C'EST LA LIGNE À MODIFIER ICI :
+        if (isset($_POST['parent_name'])) { // OK, la clé attendue est 'parent_name'
+            $parentNameFromAjax = htmlspecialchars(trim($_POST['parent_name'])); // <-- LISEZ BIEN 'parent_name' ici !
+
+            error_log("parentNameFromAjax (via POST): " . $parentNameFromAjax);
+            error_log("loggedInParentName (via session): " . $loggedInParentName);
+
+            // Vérification de sécurité : le nom envoyé par JS doit correspondre au nom de la session
+            if ($parentNameFromAjax !== $loggedInParentName || empty($loggedInParentName)) {
+                $resultat = ['success' => false, 'message' => 'Accès non autorisé ou parent non identifié.'];
+                error_log("Accès non autorisé ou non-concordance des noms de parent: " . json_encode($resultat));
+            } else {
+                $resultat = $auth->obtenirPaiementsParNomParent($parentNameFromAjax);
+                error_log("Résultat final de obtenirPaiementsParNomParent: " . json_encode($resultat));
+            }
+        } else {
+            $resultat = ['success' => false, 'message' => 'Clé "parent_name" manquante dans la requête POST.'];
+            error_log("Erreur: Clé 'parent_name' manquante.");
+        }
+    }
+    // --- Si l'action n'est pas reconnue ---
+    else {
+        $resultat = ['success' => false, 'message' => 'Action POST non reconnue.'];
+        error_log("Action POST non reconnue: " . json_encode($resultat));
+    }
+
+    echo json_encode($resultat);
+    exit; // Très important : arrête le script ici après avoir envoyé la réponse JSON
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -111,144 +160,181 @@
     </section>
 
     <!-- Section explicative -->
-    <section class="bg-white py-20 px-6">
-        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <!-- Texte -->
-            <div>
-                <h2 class="text-4xl font-extrabold text-gray-900 mb-4">
-                    Paiement des frais scolaires
-                </h2>
-                <p class="text-gray-600 text-lg mb-6">
-                    Vous pouvez régler en ligne les frais de votre enfant en toute sécurité. Ce portail vous permet
-                    également de :
-                </p>
-                <ul class="list-disc pl-5 space-y-3 text-gray-700 text-base">
-                    <li>Accéder au statut de paiement en temps réel.</li>
-                    <li>Visualiser et télécharger les reçus précédents.</li>
-                    <li>Consulter les échéances futures des paiements.</li>
-                    <li>Recevoir des notifications par email ou SMS.</li>
-                </ul>
+    <section class="bg-gray-100 py-16 px-6">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Historique des Paiements de Votre Enfant
+            </h2>
 
-                <div class="mt-8">
-                    <button id="reportButton"class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold py-3 px-6 rounded-full hover:from-indigo-600 hover:to-blue-600 transition">
-                        <i class="fas fa-chart-bar text-white"></i>
-                        <span>Voir rapports de paiements</span>
-                    </button>
-                </div>
-                <!-- Formulaire pour les rapports de paiements -->
-                <div id="reportForm" class="hidden mt-8 bg-white/10 p-6 rounded-xl backdrop-blur-sm">
-                    <form id="reportSearchForm" class="space-y-4">
-                        <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
-                        <div class="w-full md:w-auto">
-                            <label for="reportMatricule" class="block text-sm font-medium text-white mb-1">Matricule</label>
-                            <input type="text" id="reportMatricule" name="reportMatricule" required
-                            class="w-full px-4 py-2 border font-normal border-gray-300 rounded-lg text-black"
-                            placeholder="Entrez le matricule">
-                        </div>
-                        <button type="submit"
-                            class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 h-10 mt-5 md:mt-0">
-                            <i class="fas fa-search mr-2"></i> Chercher
-                        </button>
-                        </div>
-                    </form>
-                    <div id="paiementsResult" class="mt-6"></div>
+            <div class="bg-white rounded-xl shadow-lg p-6 overflow-hidden">
+                <div class="table-responsive overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                 <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Matricule</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nom Enfant</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Post-Nom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Prénom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sexe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Montant Payé</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Motif</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date Paiement</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Statut</th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    Chargement de l'historique des paiements...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            
-
-            <!-- Image -->
-            <div class="flex justify-center">
-                <img src="../images/Eleve.png" alt="Paiement élève" class="rounded-lg ">
-            </div>
         </div>
     </section>
 
+    <footer class="bg-gray-800 text-white py-6 text-center">
+        <p class="text-sm">
+            &copy;
+            <script>document.write(new Date().getFullYear())</script> C.S.P.P.UNILU. Tous droits réservés.
+        </p>
+    </footer>
+
     <script>
-        // Afficher/Masquer le formulaire des rapports
-        document.getElementById('reportButton').addEventListener('click', function () {
-            const form = document.getElementById('reportForm');
-            form.classList.toggle('hidden');
-        });
+        document.addEventListener('DOMContentLoaded', function () {
+            const paiementsTableBody = document.getElementById('paiementsTableBody');
+            const loggedInParentName = "<?php echo htmlspecialchars($loggedInParentName); ?>";
 
-        // Traitement du formulaire des rapports de paiements
-        document.getElementById('reportSearchForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const matricule = document.getElementById('reportMatricule').value;
-            const resultDiv = document.getElementById('paiementsResult');
+            async function fetchPaiementsForParent(parentName) {
+                if (!parentName) {
+                    paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
+                    return;
+                }
 
-            resultDiv.innerHTML = `<p class="text-gray-500">Recherche en cours...</p>`;
+                paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Chargement de l'historique des paiements pour ${htmlspecialchars(parentName)}...</td></tr>`;
 
-            try {
-                const response = await fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `matricule=${encodeURIComponent(matricule)}&action=get_paiements`
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    let rows = '';
-                    data.paiements.forEach(paiement => {
-                        rows += `
-                            <tr class="border-b">
-                                <td class="px-4 py-2">${paiement.nom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.postnom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.prenom_eleve}</td>
-                                <td class="px-4 py-2">${paiement.sexe_eleve === 'M' ? 'Masculin' : 'Féminin'}</td>
-                                <td class="px-4 py-2">${paiement.date_paiement}</td>
-                                <td class="px-4 py-2">${paiement.montant_payer}</td>
-                                <td class="px-4 py-2">${paiement.motif_paiement}</td>
-                                <td class="px-4 py-2">${paiement.classe_eleve}</td>
-                                <td class="px-4 py-2">${paiement.nom_parent}</td>
-                                <td class="px-4 py-2">${paiement.adresse_eleve}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs rounded-full ${paiement.payment_status === 'success'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                    }">
-                                    ${paiement.payment_status === 'success' ? 'Payé' : 'Échoué'}
-                                    </span>
-                                </td>
-                            </tr>
-                        `;
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'POST', // Assurez-vous que la méthode est POST
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        // ICI : Utilisez 'parent_name' comme clé, pas 'nom_parent' car c'est ce que PHP attend maintenant
+                        body: `action=get_paiements_by_parent&parent_name=${encodeURIComponent(parentName)}`
                     });
 
-                    resultDiv.innerHTML = `
-                        <table class="min-w-full text-sm text-left border border-gray-300 rounded-lg mt-4">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Post-Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prénom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sexe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motif</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom parent</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adresse</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white text-black">
-                                ${rows}
-                            </tbody>
-                        </table>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `<p class="text-red-500 font-semibold">${data.message}</p>`;
+                    const data = await response.json();
+
+                    if (data.success && data.paiements && data.paiements.length > 0) {
+                        let rows = '';
+                        data.paiements.forEach(paiement => {
+                            // Assurez-vous que les valeurs sont nettoyées si elles contiennent du texte (devise)
+                            const montantPayeNumeric = parseFloat(String(paiement.montant_payer).replace(/[^0-9.,]/g, '').replace(',', '.'));
+                            const totalAnnuelNumeric = parseFloat(String(paiement.total_annuel).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+
+                            const montantRestant = totalAnnuelNumeric - montantPayeNumeric;
+
+                            let statusClass = '';
+                            let statusText = '';
+                            let paymentButton = ''; // Nouvelle variable pour le bouton
+
+                            if (montantRestant <= 0) {
+                                statusClass = 'bg-green-100 text-green-800';
+                                statusText = 'Payé';
+                            } else {
+                                statusClass = 'bg-red-100 text-red-800';
+                                statusText = `Reste : ${montantRestant.toLocaleString('fr-FR')} Frc`;
+
+                                // Créer le bouton de paiement si un montant est dû
+                                // Nous allons passer toutes les infos nécessaires via l'URL
+                                const paymentUrl = `../Parent/PaiementParent.php?` +
+                                    `matricule=${encodeURIComponent(paiement.matricule || '')}&` +
+                                    `nom_eleve=${encodeURIComponent(paiement.nom_eleve || '')}&` +
+                                    `postnom_eleve=${encodeURIComponent(paiement.postnom_eleve || '')}&` +
+                                    `prenom_eleve=${encodeURIComponent(paiement.prenom_eleve || '')}&` +
+                                    `sexe_eleve=${encodeURIComponent(paiement.sexe_eleve || '')}&` +
+                                    `classe_eleve=${encodeURIComponent(paiement.classe_eleve || '')}&` +
+                                    `nom_parent=${encodeURIComponent(loggedInParentName || '')}&` + // Utilisez le nom du parent connecté
+                                    `montant_du=${encodeURIComponent(montantRestant.toFixed(2))}`; // Montant restant dû
+
+                                paymentButton = `<a href="${paymentUrl}" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700">Payer le solde</a>`;
+                            }
+
+                            rows += `
+                                    <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.matricule)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.nom_eleve)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.postnom_eleve)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.prenom_eleve)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.sexe_eleve || 'N/A')}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.classe_eleve)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.montant_payer)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.motif_paiement)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.date_paiement)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                                ${statusText}
+                                            </span>
+                                            ${paymentButton} </td>
+                                    </tr>
+                                    `;
+                        });
+                        paiementsTableBody.innerHTML = rows;
+                    } else {
+                        paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">${data.message || "Aucun historique de paiement trouvé pour les enfants de ce parent."}</td></tr>`;
+                    }
+                } catch (error) {
+                    console.error('Erreur lors de la récupération des paiements:', error);
+                    paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Une erreur est survenue lors du chargement de l'historique des paiements.</td></tr>`;
                 }
-            } catch (error) {
-                resultDiv.innerHTML = `<p class="text-red-500 font-semibold">Erreur lors de la requête.</p>`;
+            }
+
+            if (loggedInParentName) {
+                fetchPaiementsForParent(loggedInParentName);
+            } else {
+                paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
+            }
+
+            function htmlspecialchars(str) {
+                if (typeof str !== 'string') return str;
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return str.replace(/[&<>"']/g, function (m) { return map[m]; });
             }
         });
     </script>
 
-     <!-- SEARCH LOGO -->
+
+    <!-- SEARCH LOGO -->
     <script>
         let a = 0;
         let masque = document.createElement('div');

@@ -2,6 +2,20 @@
 class AuthController
 {
     public $conn;
+    private $paymentModel;
+    private $table_name = "paiement"; // Nom de votre table de paiements
+    private $students_table = "inscriptions"; // Nom de votre table des élèves
+    private $parents_table = "utilisateurs"; // Nom de votre table des parents
+
+    // ... (vos propriétés et méthodes existantes, y compris le constructeur) ...
+
+    /**
+     * Récupère tous les paiements pour les enfants associés à un parent donné par son nom.
+     * Effectue des jointures pour obtenir les détails complets de l'élève et du parent.
+     *
+     * @param string $parentName Le nom complet du parent (ou le champ que vous utilisez pour l'identification).
+     * @return array Les données de paiement si trouvées, ou un tableau vide.
+     */
 
     public function __construct()
     {
@@ -845,8 +859,96 @@ class AuthController
         $this->conn->close();
     }
 
+    public function deletePayment($paymentId)
+    {
+        // Utilisez la méthode de suppression de votre modèle de paiement
+        return $this->paymentModel->delete($paymentId);
+    }
+
+    public function getPaiementsByParentName($parentName)
+    {
+        error_log("Début de getPaiementsByParentName dans AuthController pour parent: " . $parentName);
+
+        // Assurez-vous que $this->conn est bien un objet mysqli valide
+        if (!$this->conn) {
+            error_log("Erreur: La connexion à la base de données n'est pas établie dans getPaiementsByParentName (AuthController).");
+            return false;
+        }
+
+        $query = "SELECT
+            i.matricule,
+            p.montant_payer,
+            p.motif_paiement,
+            p.date_paiement,
+            i.nom_eleve AS nom_eleve,
+            i.postnom_eleve AS postnom_eleve,
+            i.prenom_eleve AS prenom_eleve,
+            i.sexe_eleve AS sexe_eleve,
+            i.classe_selection AS classe_eleve,
+            p.total_annuel AS total_annuel
+        FROM
+            " . $this->table_name . " p
+        JOIN
+            " . $this->students_table . " i ON p.matricule = i.matricule
+        JOIN
+            " . $this->parents_table . " u ON i.parent_id = u.id 
+        WHERE
+            u.Names_User = ?";
+
+        $stmt = $this->conn->prepare($query);
+
+        if (!$stmt) {
+            error_log("Erreur de préparation de la requête SQL dans AuthController::getPaiementsByParentName: " . $this->conn->error);
+            return false;
+        }
+
+        $stmt->bind_param("s", $parentName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result === false) {
+            error_log("Erreur d'exécution de la requête ou de récupération des résultats dans AuthController::getPaiementsByParentName: " . $stmt->error);
+            return false;
+        }
+
+        $paiements = $result->fetch_all(MYSQLI_ASSOC);
+        error_log("Requête SQL réussie. Nombre de paiements trouvés: " . count($paiements));
+        return $paiements;
+    }
+
+    // La fonction qui utilise maintenant la version interne de getPaiementsByParentName
+    public function obtenirPaiementsParNomParent($parentName)
+    {
+        error_log("Appel de obtenirPaiementsParNomParent dans AuthController avec parentName: " . $parentName);
+        try {
+            // APPEL MODIFIÉ : on appelle la méthode directement sur l'objet courant ($this)
+            $paiements = $this->getPaiementsByParentName($parentName);
+
+            // Log le résultat brut de la méthode interne
+            error_log("Résultat brut de getPaiementsByParentName (interne): " . json_encode($paiements));
+
+            if ($paiements !== false && !empty($paiements)) {
+                foreach ($paiements as &$paiement) {
+                    $paiement['montant_payer_numeric'] = (float) filter_var($paiement['montant_payer'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                    $paiement['total_annuel_numeric'] = (float) filter_var($paiement['total_annuel'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                }
+                error_log("Paiements formatés pour la réponse: " . json_encode($paiements));
+                return ['success' => true, 'paiements' => $paiements];
+            } else {
+                error_log("Aucun paiement trouvé ou échec de la méthode interne pour parent: " . $parentName);
+                return ['success' => false, 'message' => 'Aucun historique de paiement trouvé pour les enfants de ce parent.'];
+            }
+        } catch (Exception $e) {
+            error_log("Erreur critique dans obtenirPaiementsParNomParent (AuthController): " . $e->getMessage());
+            return ['success' => false, 'message' => 'Une erreur est survenue lors de la récupération des données (Controller): ' . $e->getMessage()];
+        }
+    }
+
+
 
 }
+
+
 
 // Gestion des requêtes AJAX
 if (isset($_GET['action']) && $_GET['action'] == 'rechercherEleve') {

@@ -1,40 +1,53 @@
 <?php
-$message = "";
-require_once __DIR__ . '/../Controllers/AuthController.php';
-$auth = new AuthController();
+    $message = "";
+    require_once __DIR__ . '/../Controllers/AuthController.php';
+    $auth = new AuthController();
 
-// Récupérer dynamiquement les types de paiement via AuthController
-$typesPaiement = [];
-try {
-    $sql = "SELECT id, nom_type FROM payementtype";
-    $result = $auth->conn->query($sql);
-    if ($result && $result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $typesPaiement[] = $row;
+    // Variables pour pré-remplir le formulaire
+    $matricule_prefill = htmlspecialchars($_GET['matricule'] ?? '');
+    $nom_eleve_prefill = htmlspecialchars($_GET['nom_eleve'] ?? '');
+    $postnom_eleve_prefill = htmlspecialchars($_GET['postnom_eleve'] ?? '');
+    $prenom_eleve_prefill = htmlspecialchars($_GET['prenom_eleve'] ?? '');
+    $sexe_eleve_prefill = htmlspecialchars($_GET['sexe_eleve'] ?? '');
+    $classe_eleve_prefill = htmlspecialchars($_GET['classe_eleve'] ?? '');
+    $nom_parent_prefill = htmlspecialchars($_GET['nom_parent'] ?? '');
+    $adresse_eleve_prefill = htmlspecialchars($_GET['adresse_eleve'] ?? '');
+    $montant_du_prefill = htmlspecialchars($_GET['montant_du'] ?? ''); // Montant restant à payer
+
+
+    // Récupérer dynamiquement les types de paiement via AuthController
+    $typesPaiement = [];
+    try {
+        $sql = "SELECT id, nom_type FROM payementtype";
+        $result = $auth->conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $typesPaiement[] = $row;
+            }
+        }
+    } catch (Exception $e) {
+        $typesPaiement = [];
+    }
+
+    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule_info_ajax'])) { // Renommez le paramètre pour éviter la confusion
+        header('Content-Type: application/json');
+        echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule_info_ajax']));
+        exit;
+    }
+
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        // Si c'est une requête AJAX pour le rapport
+        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
+            header('Content-Type: application/json');
+            echo json_encode($auth->handlePaymentAndReport($_POST));
+            exit;
+        } else {
+            $response = $auth->handlePaymentAndReport($_POST);
+            $message = $response['message'];
         }
     }
-} catch (Exception $e) {
-    $typesPaiement = [];
-}
-
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule'])) {
-    header('Content-Type: application/json');
-    echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule']));
-    exit;
-}
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Si c'est une requête AJAX pour le rapport
-    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
-        header('Content-Type: application/json');
-        echo json_encode($auth->handlePaymentAndReport($_POST));
-        exit;
-    } else {
-        $response = $auth->handlePaymentAndReport($_POST);
-        $message = $response['message'];
-    }
-}
 ?>
+
 
 <!doctype html>
 <html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
@@ -91,9 +104,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 return;
             }
 
-            
+
             let transactionId = Math.floor(Math.random() * 100000000).toString();
-          
+
 
 
             CinetPay.setConfig({
@@ -144,10 +157,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
         <div class="bg-overlay"></div>
-        <!-- auth-page content -->
         <div class="auth-page-content overflow-hidden pt-lg-5">
             <div class="container">
-
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="card overflow-hidden m-0 card-bg-fill galaxy-border-none">
@@ -157,13 +168,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         <div class="bg-overlay"></div>
                                         <div class="position-relative h-100 d-flex flex-column">
                                             <div class="mb-4">
-
                                             </div>
                                             <div class="mt-auto">
                                                 <div class="mb-3">
                                                     <i class="ri-double-quotes-l display-4 text-success"></i>
                                                 </div>
-
                                                 <div id="qoutescarouselIndicators" class="carousel slide"
                                                     data-bs-ride="carousel">
                                                     <div class="carousel-indicators">
@@ -191,8 +200,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- end carousel -->
-
                                             </div>
                                         </div>
                                     </div>
@@ -206,32 +213,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                         </div>
 
                                         <div>
-                                            <h5 class="text-primary text-center">Paiement en lignes</h5>
+                                            <h5 class="text-primary text-center">Paiement en ligne</h5>
                                         </div>
                                         <?php echo $message; ?>
                                         <div id="form-error-message" class="text-danger mb-3 fw-semibold"></div>
                                         <div class="mt-4">
                                             <form class="needs-validation" novalidate method="POST">
-                                              
                                                 <input type="hidden" name="local_payment" value="1">
                                                 <input type="hidden" name="payment_validated" id="payment_validated"
                                                     value="0">
-                                                <input type="hidden" name="local_payment" value="1">
+                                                <input type="hidden" name="transaction_id" id="transaction_id" value="">
+
                                                 <label for="matricule" class="form-label">Matricule <span
                                                         class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="matricule" name="matricule"
                                                     placeholder="Entrez le matricule" required
-                                                    onblur="chercherEleveParMatricule(this.value)">
+                                                    value="<?php echo $matricule_prefill; ?>" readonly>
                                                 <div class="invalid-feedback">
                                                     Veuillez entrer le matricule de l'élève.
                                                 </div>
-                                                <!-- Nouveaux champs pour les informations de l'élève -->
                                                 <div class="row">
                                                     <div class="col-md-4 mb-3">
                                                         <label for="nom_eleve" class="form-label">Nom <span
                                                                 class="text-danger">*</span></label>
                                                         <input type="text" class="form-control" id="nom_eleve"
-                                                            name="nom_eleve" placeholder="Nom" required>
+                                                            name="nom_eleve" placeholder="Nom" required
+                                                            value="<?php echo $nom_eleve_prefill; ?>" readonly>
                                                         <div class="invalid-feedback">
                                                             Veuillez entrer le nom de l'élève.
                                                         </div>
@@ -241,7 +248,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         <label for="postnom_eleve" class="form-label">Postnom <span
                                                                 class="text-danger">*</span></label>
                                                         <input type="text" class="form-control" id="postnom_eleve"
-                                                            name="postnom_eleve" placeholder="Postnom" required>
+                                                            name="postnom_eleve" placeholder="Postnom" required
+                                                            value="<?php echo $postnom_eleve_prefill; ?>" readonly>
                                                         <div class="invalid-feedback">
                                                             Veuillez entrer le postnom de l'élève.
                                                         </div>
@@ -251,7 +259,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         <label for="prenom_eleve" class="form-label">Prénom <span
                                                                 class="text-danger">*</span></label>
                                                         <input type="text" class="form-control" id="prenom_eleve"
-                                                            name="prenom_eleve" placeholder="Prénom" required>
+                                                            name="prenom_eleve" placeholder="Prénom" required
+                                                            value="<?php echo $prenom_eleve_prefill; ?>" readonly>
                                                         <div class="invalid-feedback">
                                                             Veuillez entrer le prénom de l'élève.
                                                         </div>
@@ -261,11 +270,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 <div class="mb-3">
                                                     <label for="sexe_eleve" class="form-label">Sexe <span
                                                             class="text-danger">*</span></label>
-                                                    <select class="form-control" id="sexe_eleve" name="sexe_eleve"
-                                                        required>
-                                                        <option value="">Sélectionnez le sexe</option>
-                                                        <option value="M">Masculin</option>
-                                                        <option value="F">Féminin</option>
+                                                    <select class="form-select" id="sexe_eleve" name="sexe_eleve"
+                                                        required disabled>
+                                                        <option value="">Sélectionner le sexe</option>
+                                                        <option value="M" <?php echo ($sexe_eleve_prefill === 'M') ? 'selected' : ''; ?>>Masculin</option>
+                                                        <option value="F" <?php echo ($sexe_eleve_prefill === 'F') ? 'selected' : ''; ?>>Féminin</option>
                                                     </select>
                                                     <div class="invalid-feedback">
                                                         Veuillez sélectionner le sexe de l'élève.
@@ -275,148 +284,169 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 <div class="mb-3">
                                                     <label for="classe_eleve" class="form-label">Classe <span
                                                             class="text-danger">*</span></label>
-                                                    <select class="form-control" id="classe_eleve" name="classe_eleve"
-                                                        required>
-                                                        <option value="">Sélectionnez une classe</option>
-                                                        <option value="7e EB">7e EB</option>
-                                                        <option value="8e EB">8e EB</option>
-                                                        <option value="1ere SC">1ère SC</option>
-                                                        <option value="1ere CG">1ère CG</option>
-                                                        <option value="1ere HP">1ère HP</option>
-                                                        <option value="1ere MG">1ère MG</option>
-                                                        <option value="1ere ELECT">1ère ELECT</option>
-                                                        <option value="2ere SC">2ère SC</option>
-                                                        <option value="2ere CG">2ère CG</option>
-                                                        <option value="2ere HP">2ère HP</option>
-                                                        <option value="2ere MG">2ère MG</option>
-                                                        <option value="2ere ELECT">2ère ELECT</option>
-                                                        <option value="2eme TCC">2ème TCC</option>
-                                                        <option value="3ere SC">3ère SC</option>
-                                                        <option value="3ere CG">3ère CG</option>
-                                                        <option value="3ere HP">3ère HP</option>
-                                                        <option value="3ere MG">3ère MG</option>
-                                                        <option value="3ere ELECT">3ère ELECT</option>
-                                                        <option value="3eme TCC">3ème TCC</option>
-                                                        <option value="4ere SC">4ère SC</option>
-                                                        <option value="4ere CG">4ère CG</option>
-                                                        <option value="4ere HP">4ère HP</option>
-                                                        <option value="4ere MG">4ère MG</option>
-                                                        <option value="4ere ELECT">4ère ELECT</option>
-                                                        <option value="4eme TCC">4ème TCC</option>
-                                                    </select>
+                                                    <input type="text" class="form-control" id="classe_eleve"
+                                                        name="classe_eleve" placeholder="Classe" required
+                                                        value="<?php echo $classe_eleve_prefill; ?>" readonly>
                                                     <div class="invalid-feedback">
-                                                        Veuillez sélectionner une classe.
+                                                        Veuillez entrer la classe de l'élève.
                                                     </div>
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label for="nom_parent" class="form-control">Nom du parent<span
+                                                    <label for="nom_parent" class="form-label">Nom du Parent <span
                                                             class="text-danger">*</span></label>
-                                                    <input type="text" name="nom_parent" class="form-control"
-                                                        placeholder="Entrez le nom du parent(tuteur) de l'eleve"
-                                                        required>
+                                                    <input type="text" class="form-control" id="nom_parent"
+                                                        name="nom_parent" placeholder="Nom du parent" required
+                                                        value="<?php echo $nom_parent_prefill; ?>" readonly>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez entrer le nom du parent.
+                                                    </div>
                                                 </div>
+
                                                 <div class="mb-3">
-                                                    <label for="adresse_eleve" class="form_control">Adresse<span
-                                                            class="text-danger">*</span></label>
-                                                    <input type="text" name="adresse_eleve" class="form-control"
-                                                        placeholder="Entrez l'adresse de l'eleve" required>
+                                                    <label for="adresse_eleve" class="form-label">Adresse de
+                                                        l'élève</label>
+                                                    <input type="text" class="form-control" id="adresse_eleve"
+                                                        name="adresse_eleve" placeholder="Adresse"
+                                                        value="<?php echo $adresse_eleve_prefill ; ?>"
+                                                        readonly>
                                                 </div>
+
 
                                                 <div class="mb-3">
                                                     <label for="montant_payer" class="form-label">Montant à payer <span
                                                             class="text-danger">*</span></label>
                                                     <input type="number" class="form-control" id="montant_payer"
-                                                        name="montant_payer" placeholder="Entrez le montant à payer"
-                                                        min="1" required>
+                                                        name="montant_payer" placeholder="Entrez le montant" required
+                                                        value="<?php echo ($montant_du_prefill > 0) ? $montant_du_prefill : ''; ?>">
+                                                    <div class="invalid-feedback">
+                                                        Veuillez entrer le montant à payer.
+                                                    </div>
                                                 </div>
 
                                                 <div class="mb-3">
                                                     <label for="devise" class="form-label">Devise <span
                                                             class="text-danger">*</span></label>
-                                                    <select class="form-control" id="devise" name="devise" required>
-                                                        <option value="">Sélectionnez une devise</option>
-                                                        <option value="$">USD</option>
-                                                        <option value="Fc">CDF</option>
+                                                    <select class="form-select" id="devise" name="devise" required>
+                                                        <option value="">Sélectionnez la devise</option>
+                                                        <option value="FC" selected>FC</option>
+                                                        <option value="$">$</option>
                                                     </select>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez sélectionner la devise.
+                                                    </div>
                                                 </div>
-
                                                 <div class="mb-3">
-                                                    <label for="motif_paiement" class="form-label">Motif du paiement
-                                                        <span class="text-danger">*</span>
-                                                    </label>
-                                                    <select class="form-control" id="motif_paiement"
-                                                        name="motif_paiement" required>
-                                                        <option value="">Sélectionnez le motif du paiement</option>
-                                                        <?php foreach ($typesPaiement as $type): ?>
-                                                            <option value="<?= htmlspecialchars($type['nom_type']) ?>">
-                                                                <?= htmlspecialchars($type['nom_type']) ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
+                                                    <label for="motif_paiement" class="form-label">Motif du
+                                                        paiement <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="motif_paiement"
+                                                        name="motif_paiement" placeholder="Ex: Frais Scolaire" required>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez entrer le motif du paiement.
+                                                    </div>
                                                 </div>
+                                                <input type="hidden" name="total_annuel" id="total_annuel"
+                                                    value="<?php echo htmlspecialchars($_GET['total_annuel'] ?? ''); ?>">
+
 
                                                 <div class="mt-4">
-                                                    <button type="button" onclick="checkout()"
-                                                        class="btn btn-success w-100">Confirmer</button>
+                                                    <button class="btn btn-success w-100" type="button"
+                                                        onclick="checkout()">Confirmer le Paiement</button>
                                                 </div>
-
                                             </form>
-
-                                            <hr class="my-4">
-
-
-
-
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <!-- end card -->
                     </div>
-                    <!-- end col -->
-
                 </div>
-                <!-- end row -->
             </div>
-            <!-- end container -->
         </div>
-        <!-- end auth page content -->
-
-
-
-        <!-- footer -->
-        <footer class="footer galaxy-border-none">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="text-center">
-                            <p class="mb-0">&copy;
-                                <script>document.write(new Date().getFullYear())</script> Administration <i
-                                    class="mdi mdi-heart text-success"></i> by C.S.P.P.UNILU
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </footer>
-        <!-- end Footer -->
     </div>
-    <!-- end auth-page-wrapper -->
 
-    <!-- JAVASCRIPT -->
     <script src="../libs/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="../libs/simplebar/simplebar.min.js"></script>
-    <script src="assets/libs/node-waves/waves.min.js"></script>
+    <script src="../libs/node-waves/waves.min.js"></script>
     <script src="../libs/feather-icons/feather.min.js"></script>
-    <script src="../js/pages/plugins/lord-icon-2.1.0.js"></script>
+    <script src="../js/pages/plugins/lord-icon-2x.js"></script>
     <script src="../js/plugins.js"></script>
 
-    <!-- validation init -->
-    <script src="../js/pages/form-validation.init.js"></script>
-    <!-- password create init -->
-    <script src="../js/pages/passowrd-create.init.js"></script>
+    <script src="../libs/particles.js/particles.js"></script>
+    <script src="../js/pages/particles.app.js"></script>
+    <script src="../js/pages/password-addon.init.js"></script>
+
+    <script>
+        // Fonction pour pré-remplir les champs si des paramètres GET sont présents
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            if (urlParams.has('matricule')) {
+                document.getElementById('matricule').value = urlParams.get('matricule');
+                document.getElementById('nom_eleve').value = urlParams.get('nom_eleve');
+                document.getElementById('postnom_eleve').value = urlParams.get('postnom_eleve');
+                document.getElementById('prenom_eleve').value = urlParams.get('prenom_eleve');
+                // Gérer le select pour le sexe
+                const sexeSelect = document.getElementById('sexe_eleve');
+                const sexeValue = urlParams.get('sexe_eleve');
+                if (sexeValue) {
+                    sexeSelect.value = sexeValue;
+                }
+                document.getElementById('classe_eleve').value = urlParams.get('classe_eleve');
+                document.getElementById('nom_parent').value = urlParams.get('nom_parent');
+                document.getElementById('adresse_eleve').value = urlParams.get('adresse_eleve') || ''; // L'adresse n'est pas toujours passée
+
+                const montantDu = urlParams.get('montant_du');
+                if (montantDu) {
+                    document.getElementById('montant_payer').value = parseFloat(montantDu).toFixed(2);
+                }
+                // Si vous avez besoin de total_annuel ici pour CinetPay, assurez-vous de le passer aussi via l'URL
+                document.getElementById('total_annuel').value = urlParams.get('total_annuel') || '';
+
+                // Désactiver la recherche par matricule si les infos sont déjà là
+                document.getElementById('matricule').removeEventListener('blur', chercherEleveParMatricule);
+            }
+        });
+
+        // Gardez la fonction chercherEleveParMatricule pour les cas où le formulaire n'est pas pré-rempli
+        async function chercherEleveParMatricule(matricule) {
+            if (matricule.length > 0) {
+                try {
+                    // Utilisez un paramètre différent pour la requête AJAX afin de ne pas interférer avec le pré-remplissage initial
+                    const response = await fetch(`PaiementParent.php?matricule_info_ajax=${encodeURIComponent(matricule)}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById("nom_eleve").value = data.data.nom_eleve;
+                        document.getElementById("postnom_eleve").value = data.data.postnom_eleve;
+                        document.getElementById("prenom_eleve").value = data.data.prenom_eleve;
+                        document.getElementById("sexe_eleve").value = data.data.sexe_eleve;
+                        document.getElementById("classe_eleve").value = data.data.classe_selection;
+                        document.querySelector('input[name="nom_parent"]').value = data.data.nom_parent; // Assurez-vous d'avoir 'nom_parent' dans les données
+                        document.querySelector('input[name="adresse_eleve"]').value = data.data.adresse_eleve; // Assurez-vous d'avoir 'adresse_eleve'
+                        // Si vous voulez pré-remplir le montant_du basé sur l'historique de l'élève ici,
+                        // il faudrait une autre requête ou une logique plus complexe pour résumer ses paiements.
+                        // Pour l'instant, on se contente des infos de l'élève.
+                        document.getElementById("form-error-message").innerHTML = "";
+                    } else {
+                        document.getElementById("form-error-message").innerHTML = "Matricule non trouvé ou erreur: " + data.message;
+                        // Effacer les champs si le matricule n'est pas trouvé
+                        document.getElementById("nom_eleve").value = "";
+                        document.getElementById("postnom_eleve").value = "";
+                        document.getElementById("prenom_eleve").value = "";
+                        document.getElementById("sexe_eleve").value = "";
+                        document.getElementById("classe_eleve").value = "";
+                        document.querySelector('input[name="nom_parent"]').value = "";
+                        document.querySelector('input[name="adresse_eleve"]').value = "";
+                        document.getElementById("montant_payer").value = "";
+                    }
+                } catch (error) {
+                    console.error('Erreur de recherche du matricule:', error);
+                    document.getElementById("form-error-message").innerHTML = "Erreur de connexion lors de la recherche du matricule.";
+                }
+            }
+        }
+    </script>
 
     <!-- SEARCH LOGO -->
     <script>
