@@ -1,51 +1,53 @@
 <?php
-    $message = "";
-    require_once __DIR__ . '/../Controllers/AuthController.php';
-    $auth = new AuthController();
+$message = "";
+require_once __DIR__ . '/../Controllers/AuthController.php';
+$auth = new AuthController();
 
-    // Variables pour pré-remplir le formulaire
-    $matricule_prefill = htmlspecialchars($_GET['matricule'] ?? '');
-    $nom_eleve_prefill = htmlspecialchars($_GET['nom_eleve'] ?? '');
-    $postnom_eleve_prefill = htmlspecialchars($_GET['postnom_eleve'] ?? '');
-    $prenom_eleve_prefill = htmlspecialchars($_GET['prenom_eleve'] ?? '');
-    $sexe_eleve_prefill = htmlspecialchars($_GET['sexe_eleve'] ?? '');
-    $classe_eleve_prefill = htmlspecialchars($_GET['classe_eleve'] ?? '');
-    $nom_parent_prefill = htmlspecialchars($_GET['nom_parent'] ?? '');
-    $adresse_eleve_prefill = htmlspecialchars($_GET['adresse_eleve'] ?? '');
-    $montant_du_prefill = htmlspecialchars($_GET['montant_du'] ?? ''); // Montant restant à payer
+// Variables pour pré-remplir le formulaire
+$matricule_prefill = htmlspecialchars($_GET['matricule'] ?? '');
+$nom_eleve_prefill = htmlspecialchars($_GET['nom_eleve'] ?? '');
+$postnom_eleve_prefill = htmlspecialchars($_GET['postnom_eleve'] ?? '');
+$prenom_eleve_prefill = htmlspecialchars($_GET['prenom_eleve'] ?? '');
+$sexe_eleve_prefill = htmlspecialchars($_GET['sexe_eleve'] ?? '');
+$classe_eleve_prefill = htmlspecialchars($_GET['classe_eleve'] ?? '');
+$nom_parent_prefill = htmlspecialchars($_GET['nom_parent'] ?? '');
+$adresse_eleve_prefill = htmlspecialchars($_GET['adresse_eleve'] ?? '');
+$montant_du_prefill = htmlspecialchars($_GET['montant_du'] ?? ''); // Montant restant à payer
+$motif_paiement_prefill = htmlspecialchars($_GET['motif_paiement'] ?? '');
 
 
-    // Récupérer dynamiquement les types de paiement via AuthController
+
+// Récupérer dynamiquement les types de paiement via AuthController
+$typesPaiement = [];
+try {
+    $sql = "SELECT id, nom_type FROM payementtype";
+    $result = $auth->conn->query($sql);
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $typesPaiement[] = $row;
+        }
+    }
+} catch (Exception $e) {
     $typesPaiement = [];
-    try {
-        $sql = "SELECT id, nom_type FROM payementtype";
-        $result = $auth->conn->query($sql);
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $typesPaiement[] = $row;
-            }
-        }
-    } catch (Exception $e) {
-        $typesPaiement = [];
-    }
+}
 
-    if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule_info_ajax'])) { // Renommez le paramètre pour éviter la confusion
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule_info_ajax'])) { // Renommez le paramètre pour éviter la confusion
+    header('Content-Type: application/json');
+    echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule_info_ajax']));
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Si c'est une requête AJAX pour le rapport
+    if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
         header('Content-Type: application/json');
-        echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule_info_ajax']));
+        echo json_encode($auth->handlePaymentAndReport($_POST));
         exit;
+    } else {
+        $response = $auth->handlePaymentAndReport($_POST);
+        $message = $response['message'];
     }
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        // Si c'est une requête AJAX pour le rapport
-        if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
-            header('Content-Type: application/json');
-            echo json_encode($auth->handlePaymentAndReport($_POST));
-            exit;
-        } else {
-            $response = $auth->handlePaymentAndReport($_POST);
-            $message = $response['message'];
-        }
-    }
+}
 ?>
 
 
@@ -308,8 +310,10 @@
                                                         l'élève</label>
                                                     <input type="text" class="form-control" id="adresse_eleve"
                                                         name="adresse_eleve" placeholder="Adresse"
-                                                        value="<?php echo $adresse_eleve_prefill ; ?>"
-                                                        readonly>
+                                                        value="<?php echo $adresse_eleve_prefill; ?>" readonly>
+                                                    <div class="invalid-feedback">
+                                                        Veuillez entrer l'adresse de l'eleve.
+                                                    </div>
                                                 </div>
 
 
@@ -340,7 +344,9 @@
                                                     <label for="motif_paiement" class="form-label">Motif du
                                                         paiement <span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="motif_paiement"
-                                                        name="motif_paiement" placeholder="Ex: Frais Scolaire" required>
+                                                        name="motif_paiement" placeholder="Ex: Frais Scolaire" required
+                                                        value="<?php echo htmlspecialchars($motif_paiement_prefill ?? ''); ?>"
+                                                        readonly>
                                                     <div class="invalid-feedback">
                                                         Veuillez entrer le motif du paiement.
                                                     </div>

@@ -190,6 +190,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     Classe</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Adresse</th>
+                                    
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Montant Payé</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -267,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 statusText = 'Payé';
                             } else {
                                 statusClass = 'bg-red-100 text-red-800';
-                                statusText = `Reste : ${montantRestant.toLocaleString('fr-FR')} Frc`;
+                                statusText = `Reste : ${montantRestant.toLocaleString('fr-FR')}`;
 
                                 // Créer le bouton de paiement si un montant est dû
                                 // Nous allons passer toutes les infos nécessaires via l'URL
@@ -278,6 +282,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     `prenom_eleve=${encodeURIComponent(paiement.prenom_eleve || '')}&` +
                                     `sexe_eleve=${encodeURIComponent(paiement.sexe_eleve || '')}&` +
                                     `classe_eleve=${encodeURIComponent(paiement.classe_eleve || '')}&` +
+                                    `adresse_eleve=${encodeURIComponent(paiement.adresse_eleve || '')}&` +
+                                    `motif_paiement=${encodeURIComponent(paiement.motif_paiement|| '')}&` +
                                     `nom_parent=${encodeURIComponent(loggedInParentName || '')}&` + // Utilisez le nom du parent connecté
                                     `montant_du=${encodeURIComponent(montantRestant.toFixed(2))}`; // Montant restant dû
 
@@ -292,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.prenom_eleve)}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.sexe_eleve || 'N/A')}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.classe_eleve)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.adresse_eleve)}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.montant_payer)}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.motif_paiement)}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.date_paiement)}</td>

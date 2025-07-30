@@ -474,38 +474,131 @@ class AuthController
         $devise1,
         $devise,
         $motif_paiement,
-        $total_annuel
+        $total_annuel,
+        $transaction_id = null
     ) {
-        $transaction_id = uniqid();
-        $montant_payer_str = $montant_payer . $devise;
-        $total_annuel_str = $total_annuel . $devise1;
+        // Validation des données (important !)
+        if (empty($matricule) || empty($montant_payer) || empty($motif_paiement)) {
+            return ['success' => false, 'message' => "Le matricule, le montant et le motif sont obligatoires."];
+        }
 
-        $stmt = $this->conn->prepare("INSERT INTO paiement 
-                            (matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, 
-                             classe_eleve, nom_parent, adresse_eleve, montant_payer, motif_paiement, transaction_id, 
-                             payment_status, total_annuel) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'success', ?)");
+        // Convertir les montants en nombres flottants pour les calculs
+        $montant_payer = (float) $montant_payer;
+        $total_annuel = (float) $total_annuel;
 
-        $stmt->bind_param(
-            "ssssssssssss",
-            $matricule,
-            $nom_eleve,
-            $postnom_eleve,
-            $prenom_eleve,
-            $sexe_eleve,
-            $classe_eleve,
-            $nom_parent,
-            $adresse_eleve,
-            $montant_payer_str,
-            $motif_paiement,
-            $transaction_id,
-            $total_annuel_str
-        );
+        // Préparer les données
+        $date_paiement = date('Y-m-d H:i:s'); // Date et heure actuelles
+        $current_user_id = $_SESSION['id_user'] ?? 1; // ID de l'utilisateur actuel ou ID par défaut
 
-        if ($stmt->execute()) {
-            return ['success' => true, 'message' => "Paiement enregistré avec succès"];
-        } else {
-            return ['success' => false, 'message' => "Erreur: " . $stmt->error];
+        try {
+            // Vérifier si un enregistrement de paiement existe déjà pour ce matricule
+            // On vérifie sur la colonne 'matricule' car c'est elle qui pose problème de duplicata
+            $stmt_check = $this->conn->prepare("SELECT id, montant_payer FROM paiement WHERE matricule = ?");
+            $stmt_check->bind_param("s", $matricule);
+            $stmt_check->execute();
+            $result_check = $stmt_check->get_result();
+
+            if ($result_check->num_rows > 0) {
+                // Un enregistrement existe, nous devons le mettre à jour
+                $existing_payment = $result_check->fetch_assoc();
+                $existing_montant_payer = (float) $existing_payment['montant_payer'];
+                $new_montant_payer_total = $existing_montant_payer + $montant_payer;
+                $existing_id = $existing_payment['id']; // On récupère l'ID existant
+
+                // Mettre à jour l'enregistrement existant en utilisant l'ID comme condition WHERE
+                $stmt = $this->conn->prepare("
+                UPDATE paiement
+                SET
+                    montant_payer = ?,
+                    motif_paiement = ?,
+                    date_paiement = ?,
+                    total_annuel = ?,
+                    nom_eleve = ?,
+                    postnom_eleve = ?,
+                    prenom_eleve = ?,
+                    sexe_eleve = ?,
+                    classe_eleve = ?,
+                    nom_parent = ?,
+                    adresse_eleve = ?,
+                    devise1 = ?,
+                    devise = ?,
+                    id_users = ?
+                WHERE id = ?
+            ");
+
+                $stmt->bind_param(
+                    "dssssssssssssii", // <= CHAÎNE DE TYPES CORRIGÉE (15 caractères)
+                    $new_montant_payer_total,
+                    $motif_paiement,
+                    $date_paiement,
+                    $total_annuel,
+                    $nom_eleve,
+                    $postnom_eleve,
+                    $prenom_eleve,
+                    $sexe_eleve,
+                    $classe_eleve,
+                    $nom_parent,
+                    $adresse_eleve,
+                    $devise1,
+                    $devise,
+                    $current_user_id,
+                    $existing_id // Utilisation de l'ID existant pour la mise à jour
+                );
+
+                if ($stmt->execute()) {
+                    return ['success' => true, 'message' => "Paiement mis à jour avec succès pour l'élève " . htmlspecialchars($nom_eleve)];
+                } else {
+                    return ['success' => false, 'message' => "Erreur lors de la mise à jour du paiement : " . $stmt->error];
+                }
+
+            } else {
+                // Aucun enregistrement n'existe pour ce matricule, insérer un nouveau
+                $stmt = $this->conn->prepare("
+                    INSERT INTO paiement (
+                        matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve,
+                        classe_eleve, nom_parent, adresse_eleve, montant_payer, devise1,
+                        devise, motif_paiement, date_paiement, total_annuel, id_users
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+
+                // Correction de la chaîne de types : ajustez pour 15 variables
+                // et assurez-vous que total_annuel est 'd'
+                $stmt->bind_param(
+                    "ssssssssdssssdi", // <= CHAÎNE DE TYPES CORRIGÉE (15 caractères)
+                    // (8 s, 1 d, 4 s, 1 d, 1 i)
+                    $matricule,
+                    $nom_eleve,
+                    $postnom_eleve,
+                    $prenom_eleve,
+                    $sexe_eleve,
+                    $classe_eleve,
+                    $nom_parent,
+                    $adresse_eleve,
+                    $montant_payer,    // d
+                    $devise1,          // s
+                    $devise,           // s
+                    $motif_paiement,   // s
+                    $date_paiement,    // s
+                    $total_annuel,     // d (était 'i', doit être 'd' pour un float)
+                    $current_user_id   // i
+                );
+
+                if ($stmt->execute()) {
+                    return ['success' => true, 'message' => "Paiement enregistré avec succès pour l'élève " . htmlspecialchars($nom_eleve)];
+                } else {
+                    return ['success' => false, 'message' => "Erreur lors de l'enregistrement du paiement : " . $stmt->error];
+                }
+            }
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "Une erreur inattendue est survenue : " . $e->getMessage()];
+        } finally {
+            if (isset($stmt)) {
+                $stmt->close();
+            }
+            if (isset($stmt_check)) {
+                $stmt_check->close();
+            }
         }
     }
     //GERER LDES INFORMATIONS DE L'ELEVE
@@ -545,7 +638,7 @@ class AuthController
             'adresse_eleve' => $row['adresse_eleve']
         ];
     }
-    //RECHERCGER ELEVE PAR SON MATRICULE
+    //RECHARGER ELEVE PAR SON MATRICULE
     public function rechercherEleveParMatricule($matricule)
     {
         // Valider le matricule
@@ -633,15 +726,15 @@ class AuthController
 
     }
     // INSCRIPTION DES ELEVES
-    public function enregistrerEleve($nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee)
+    public function enregistrerEleve($nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $parent_id) // <- Ajout de $parent_id
     {
         $conn = $this->conn;
 
-        $stmt = $conn->prepare("INSERT INTO inscriptions (nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, nom_parent, adresse_eleve, annee_inscription) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO inscriptions (nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, nom_parent, adresse_eleve, annee_inscription, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"); // <- Ajout de id_parent dans la liste des colonnes
         if (!$stmt) {
             return ['success' => false, 'message' => "Erreur SQL préparation : " . $conn->error];
         }
-        $stmt->bind_param("ssssssss", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee);
+        $stmt->bind_param("ssssssssi", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $parent_id); // <- Ajout de 'i' et $parent_id
 
         if ($stmt->execute()) {
             $lastId = $conn->insert_id;
@@ -663,15 +756,15 @@ class AuthController
     }
     //MODIFIER ELEVE
 
-    public function modifierEleve($id, $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee)
+    public function modifierEleve($id, $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $parent_id) // <- Ajout de $id_parent
     {
         $conn = $this->conn;
 
-        $stmt = $conn->prepare("UPDATE inscriptions SET nom_eleve=?, postnom_eleve=?, prenom_eleve=?, sexe_eleve=?, classe_selection=?, nom_parent=?, adresse_eleve=?, annee_inscription=? WHERE id=?");
+        $stmt = $conn->prepare("UPDATE inscriptions SET nom_eleve=?, postnom_eleve=?, prenom_eleve=?, sexe_eleve=?, classe_selection=?, nom_parent=?, adresse_eleve=?, annee_inscription=?, parent_id=? WHERE id=?"); // <- Ajout de id_parent dans le SET et un '?'
         if (!$stmt) {
             return ['success' => false, 'message' => "Erreur SQL préparation modification : " . $conn->error];
         }
-        $stmt->bind_param("ssssssssi", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $id);
+        $stmt->bind_param("ssssssssii", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $parent_id, $id); // <- Ajout de 'i' et $id_parent
 
         if ($stmt->execute()) {
             $annee_suffix = substr($annee, -2);
@@ -885,6 +978,7 @@ class AuthController
             i.prenom_eleve AS prenom_eleve,
             i.sexe_eleve AS sexe_eleve,
             i.classe_selection AS classe_eleve,
+            i.adresse_eleve AS adresse_eleve,
             p.total_annuel AS total_annuel
         FROM
             " . $this->table_name . " p

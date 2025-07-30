@@ -37,10 +37,11 @@
             $_POST['nom_parent'] ?? '',
             $_POST['adresse_eleve'] ?? '',
             $_POST['montant_payer'] ?? '',
-            $_POST['devise1'] ?? '',
+             $_POST['devise1'] ?? '', 
             $_POST['devise'] ?? '',
             $_POST['motif_paiement'] ?? '',
-            $_POST['total_annuel'] ?? ''
+            $_POST['total_annuel'] ?? '',
+            $_POST['transaction_id'] ?? null
         );
 
         if ($result['success']) {
