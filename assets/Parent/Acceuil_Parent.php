@@ -48,6 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $resultat = $auth->obtenirPaiementsParNomParent($parentNameFromAjax);
                 error_log("Résultat final de obtenirPaiementsParNomParent: " . json_encode($resultat));
             }
+        } elseif ($action === 'get_enfants_et_statut_paiement') {
+            if ($loggedInParentId !== null) {
+                // Appel de la nouvelle fonction dans AuthController en passant l'ID du parent
+                $resultat = $auth->obtenirEnfantsEtStatutPaiementParIdParent($loggedInParentId);
+                error_log("Résultat de obtenirEnfantsEtStatutPaiementParIdParent: " . json_encode($resultat));
+            } else {
+                $resultat = ['success' => false, 'message' => 'ID du parent non disponible en session. Veuillez vous reconnecter.'];
+                error_log("Erreur: ID parent non disponible en session.");
+            }
         } else {
             $resultat = ['success' => false, 'message' => 'Clé "parent_name" manquante dans la requête POST.'];
             error_log("Erreur: Clé 'parent_name' manquante.");
@@ -74,13 +83,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Espace Parent | C.S.P.P.UNILU</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/assets/images/logo_pp.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
 
         body {
             font-family: 'Poppins', sans-serif;
         }
+
+        /* Styles supplémentaires pour la table */
+        .table-auto {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-auto th,
+        .table-auto td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+        }
+
+        .table-auto th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .table-auto td {
+            font-size: 0.875rem;
+            color: #4a5568;
+        }
+
+        .min-w-full {
+            min-width: 100%;
+        }
+
+        .divide-y>*+* {
+            border-top-width: 1px;
+        }
+
+        .divide-gray-200>*+* {
+            border-color: #edf2f7;
+        }
+
+        .bg-gray-50 {
+            background-color: #f9fafb;
+        }
+
+        .hover\:bg-gray-50:hover {
+            background-color: #f9fafb;
+        }
+
+        .text-xs {
+            font-size: 0.75rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-red-500 {
+            color: #ef4444;
+        }
+
+        .text-green-500 {
+            color: #22c55e;
+        }
+
+        .text-yellow-600 {
+            color: #d97706;
+        }
+
+        .bg-blue-600 {
+            background-color: #2563eb;
+        }
+
+        .hover\:bg-blue-700:hover {
+            background-color: #1d4ed8;
+        }
+
+        .rounded-md {
+            border-radius: 0.375rem;
+        }
+
+        .px-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .py-1 {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
     </style>
+
+
 </head>
 
 <body class="bg-gray-50 text-black">
@@ -92,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="flex items-center space-x-4">
             <a href="mailto:administrationcsppunilu@gmail.com" class="text-sm font-medium">Aide</a>
-            <a href="#"
+            <a href="/logoutParent"
                 class="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-indigo-600 hover:to-blue-500 text-white font-semibold py-2 px-4 rounded-full text-sm">
                 Se déconnecter
             </a>
@@ -170,7 +269,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                 <th
+                                <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Matricule</th>
                                 <th
@@ -191,7 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Adresse</th>
-                                    
+
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Montant Payé</th>
@@ -204,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Statut</th>
-                                
+
                             </tr>
                         </thead>
                         <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
@@ -216,6 +315,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </table>
                 </div>
             </div>
+
+        </div>
+    </section>
+
+        <section class="bg-gray-100 py-16 px-6">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Statut de Paiement de Vos Enfants
+            </h2>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 overflow-hidden">
+                <div class="table-responsive overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Matricule</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nom Complet Enfant</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sexe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total Annuel Dû</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Montant Total Payé</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Solde Dû</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Statut</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enfantsTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="9"
+                                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    Chargement des informations des enfants...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
 
         </div>
     </section>
@@ -283,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     `sexe_eleve=${encodeURIComponent(paiement.sexe_eleve || '')}&` +
                                     `classe_eleve=${encodeURIComponent(paiement.classe_eleve || '')}&` +
                                     `adresse_eleve=${encodeURIComponent(paiement.adresse_eleve || '')}&` +
-                                    `motif_paiement=${encodeURIComponent(paiement.motif_paiement|| '')}&` +
+                                    `motif_paiement=${encodeURIComponent(paiement.motif_paiement || '')}&` +
                                     `nom_parent=${encodeURIComponent(loggedInParentName || '')}&` + // Utilisez le nom du parent connecté
                                     `montant_du=${encodeURIComponent(montantRestant.toFixed(2))}`; // Montant restant dû
 
@@ -319,6 +472,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Une erreur est survenue lors du chargement de l'historique des paiements.</td></tr>`;
                 }
             }
+
+            
 
             if (loggedInParentName) {
                 fetchPaiementsForParent(loggedInParentName);

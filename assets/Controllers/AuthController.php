@@ -1038,6 +1038,107 @@ class AuthController
         }
     }
 
+    public function getEnfantsByParentId($parentId)
+    {
+        $enfants = [];
+        $stmt = $this->conn->prepare("SELECT * FROM inscriptions WHERE id_parent = ?");
+        if (!$stmt) {
+            error_log("Erreur de préparation SQL (getEnfantsByParentId): " . $this->conn->error);
+            return [];
+        }
+        $stmt->bind_param("i", $parentId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $enfants[] = $row;
+        }
+        $stmt->close();
+        return $enfants;
+    }
+
+    public function getTotalPayeByMatricule($matricule)
+    {
+        $totalPaye = 0.0;
+        $stmt = $this->conn->prepare("SELECT SUM(montant_payer) AS total_paye FROM paiement WHERE matricule = ?");
+        if (!$stmt) {
+            error_log("Erreur de préparation SQL (getTotalPayeByMatricule): " . $this->conn->error);
+            return 0.0;
+        }
+        $stmt->bind_param("s", $matricule);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $totalPaye = (float) ($row['total_paye'] ?? 0.0);
+        }
+        $stmt->close();
+        return $totalPaye;
+    }
+
+     public function obtenirEnfantsEtStatutPaiementParIdParent($parentId)
+    {
+        $enfantsAvecStatut = [];
+
+        if ($parentId === null) {
+            return ['success' => false, 'message' => "L'ID du parent n'est pas fourni."];
+        }
+
+        // Étape 1: Récupérer tous les enfants associés à cet ID parent
+        // Assurez-vous que 'total_annuel' existe bien dans votre table 'inscriptions'
+        $stmtEnfants = $this->conn->prepare("SELECT matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, adresse_eleve, total_annuel FROM inscriptions WHERE id_parent = ?");
+        if (!$stmtEnfants) {
+            return ['success' => false, 'message' => "Erreur SQL préparation (enfants): " . $this->conn->error];
+        }
+        $stmtEnfants->bind_param("i", $parentId);
+        $stmtEnfants->execute();
+        $resultEnfants = $stmtEnfants->get_result();
+
+        while ($enfant = $resultEnfants->fetch_assoc()) {
+            $matricule = $enfant['matricule'];
+            $total_annuel_du = (float)($enfant['total_annuel'] ?? 0.0);
+
+            // Pour chaque enfant, récupérer tous ses paiements
+            $paiementsEnfant = [];
+            $montant_paye_total = 0.0; // Initialiser le total payé pour cet enfant
+
+            // Jointure pour obtenir le nom de l'utilisateur qui a enregistré le paiement (si nécessaire)
+            $stmtPaiements = $this->conn->prepare("SELECT p.montant_payer, p.motif_paiement, p.date_paiement FROM paiement p WHERE p.matricule = ? ORDER BY p.date_paiement DESC");
+            if (!$stmtPaiements) {
+                error_log("Erreur de préparation SQL (paiements enfant): " . $this->conn->error);
+                // Si la préparation échoue, on continue avec 0 pour le montant payé
+            } else {
+                $stmtPaiements->bind_param("s", $matricule);
+                $stmtPaiements->execute();
+                $resultPaiements = $stmtPaiements->get_result();
+                while ($p = $resultPaiements->fetch_assoc()) {
+                    $paiementsEnfant[] = $p;
+                    $montant_paye_total += (float)($p['montant_payer'] ?? 0.0);
+                }
+                $stmtPaiements->close();
+            }
+
+            $solde_du = $total_annuel_du - $montant_paye_total;
+
+            // Ajouter toutes les infos de l'enfant et son statut/paiements agrégés
+            $enfantsAvecStatut[] = [
+                'matricule'         => $enfant['matricule'],
+                'nom_eleve'         => $enfant['nom_eleve'],
+                'postnom_eleve'     => $enfant['postnom_eleve'],
+                'prenom_eleve'      => $enfant['prenom_eleve'],
+                'sexe_eleve'        => $enfant['sexe_eleve'],
+                'classe_selection'  => $enfant['classe_selection'],
+                'adresse_eleve'     => $enfant['adresse_eleve'],
+                'total_annuel'      => $total_annuel_du,
+                'montant_paye_total'=> $montant_paye_total,
+                'solde_du'          => $solde_du,
+                'paiements'         => $paiementsEnfant // Historique détaillé des paiements pour cet enfant
+            ];
+        }
+        $stmtEnfants->close();
+
+        return ['success' => true, 'enfants' => $enfantsAvecStatut];
+    }
+
+
 
 
 }

@@ -89,6 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome (version stable gratuite sans compte) -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+     <!-- App favicon -->
+    <link rel="shortcut icon" href="/assets/images/logo_pp.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
 
@@ -109,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
 
         <div class="flex items-center space-x-4">
             <a href="mailto:administrationcsppunilu@gmail.com" target="_blank" class="text-sm font-medium">Aide</a>
-            <a href="#"
+            <a href="/logoutParent"
                 class="bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white font-semibold py-2 px-4 rounded-full text-sm">
                 Se déconnecter
             </a>
