@@ -1,16 +1,25 @@
 <?php
-  require_once __DIR__ . '/../Controllers/AuthController.php';
+require_once __DIR__ . '/../Controllers/AuthController.php';
 
-  $authController = new AuthController();
-  $data = $authController->getPaymentHistory();
+$authController = new AuthController();
+$data = $authController->getPaymentHistory();
 
-  $payments = $data['payments'];
-  $total_usd = $data['total_usd'];
-  $total_fc = $data['total_fc'];
-  $payments_by_class = $data['payments_by_class'];
-  $percentage_change = $data['percentage_change'];
-  $percentage_class = $data['percentage_class'];
-  $percentage_icon = $data['percentage_icon'];
+$payments = $data['payments'];
+$total_usd = $data['total_usd'];
+$total_fc = $data['total_fc'];
+$payments_by_class = $data['payments_by_class'];
+$percentage_change = $data['percentage_change'];
+$percentage_class = $data['percentage_class'];
+$percentage_icon = $data['percentage_icon'];
+// Handle delete request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+  $paymentId = $_POST['delete_id'];
+  $authController->deletePayment($paymentId);
+  // Redirect to refresh the page and show updated data
+  header('Location: ' . $_SERVER['PHP_SELF']);
+  exit();
+}
+
 ?>
 
 <!doctype html>
@@ -21,135 +30,256 @@
   <title>Historique des paiements | Administration C.S.P.P.UNILU</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    /* Custom scrollbar for table-responsive */
+    .table-responsive::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+      background-color: #a0aec0;
+      /* Tailwind gray-400 */
+      border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+      background-color: #edf2f7;
+      /* Tailwind gray-200 */
+    }
+
+    /* Hidden by default */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+  </style>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-teal-400 to-indigo-900 flex items-center justify-center">
-  <div class="container mx-auto px-4">
-     <!-- Lien de retour -->
-     <div class="mb-4">
-      <a href="../../Dashboad.php" class="text-blue text-sm font-medium hover:underline ">&larr; Retour vers la page analyse</a>
+<body class="min-h-screen bg-gradient-to-br from-green-400 to-indigo-700 flex flex-col items-center justify-center py-8">
+  <div class="container mx-auto px-4 w-full lg:w-4/5 xl:w-3/4">
+    <div class="mb-6">
+      <a href="../../Dashboad.php" class="text-white text-sm font-medium hover:underline flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Retour vers la page d'analyse
+      </a>
     </div>
-    <h1 class="text-3xl font-bold text-center text-blue-900 mb-8">HISTORIQUES DE PAIEMENTS</h1>
-    <div class="table-responsive">
-      <table class="table-auto w-full border-collapse border border-gray-300 bg-white rounded-lg shadow">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="border border-gray-300 px-4 py-2 text-blue-900">ID</th>
-            <th class="border border-gray-300 px-4 py-2">Nom de l'élève</th>
-            <th class="border border-gray-300 px-4 py-2">Classe</th>
-            <th class="border border-gray-300 px-4 py-2">Montant payé</th>
-            <th class="border border-gray-300 px-4 py-2">Devise</th>
-            <th class="border border-gray-300 px-4 py-2">Motif de paiement</th>
-            <th class="border border-gray-300 px-4 py-2">Date de paiement</th>
-            <th class="border border-gray-300 px-4 py-2">Annuel</th>
-            <th class="border border-gray-300 px-4 py-2">Status</th>
-            <th class="border border-gray-300 px-4 py-2">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (count($payments) > 0): ?>
-             <?php $id = 1; ?>
-             <?php foreach ($payments as $row): ?>
-              <?php
-                // Déterminer la devise en fonction de la valeur de montant_payer
-                $devise = strpos($row['montant_payer'], '$') !== false ? '$' : 'Fc';
-                // Calculer le montant restant à payer
-                // Extraction des données
-                $total_annuel = $row['total_annuel'];
-                $montant_payer = $row['montant_payer'];
 
-                // Retirer les lettres éventuelles (par ex: "500USD" -> 500)
-                $total_annuel_numeric = (int) filter_var($total_annuel, FILTER_SANITIZE_NUMBER_INT);
-                $montant_payer_numeric = (int) filter_var($montant_payer, FILTER_SANITIZE_NUMBER_INT);
+    <h1 class="text-4xl font-extrabold text-white text-center mb-8 drop-shadow-lg">HISTORIQUE DES PAIEMENTS</h1>
 
-                // Trouver la devise (USD ou CDF) depuis total_annuel
-                $devise = preg_replace('/[0-9]/', '', $total_annuel);
-                // Faire la soustraction
-                $reste = $total_annuel_numeric - $montant_payer_numeric;
-              ?>
-              <tr class="hover:bg-gray-100" id="row-<?php echo $row['id']; ?>">
-                <td class="border border-gray-300 px-4 py-2"><?php echo $id++; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['nom_eleve']; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['classe_eleve']; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['montant_payer']; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $devise; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['motif_paiement']; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['date_paiement']; ?></td>
-                <td class="border border-gray-300 px-4 py-2"><?php echo $row['total_annuel']; ?></td>
-                <td class="border border-gray-300 px-4 py-2">
-                  <?php if ($reste > 0): ?>
-                    <span class="text-red-500">Reste à payer: <?php echo $reste . ' ' . $devise; ?></span>
-                  <?php else: ?>
-                    <span class="text-green-500">Payé</span>
-                  <?php endif; ?>
-                </td>
-                <td class="border border-gray-300 px-4 py-2">
-                  <button onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo $devise; ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>')" class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Imprimer
-                  </button>
-                  <form method="POST" class="inline">
-                    <input type="hidden" name="delete_id" value="<?php echo $row['id']; ?>">
-                    <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                      Supprimer
-                    </button>
-                  </form>
-                </td>
+    <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+      <div class="p-6">
+        <div class="table-responsive overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Post-nom
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parent</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Classe</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant
+                  Payé</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Motif</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Annuel</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
               </tr>
-            <?php endforeach;?>
-          <?php else: ?>
-            <tr>
-              <td colspan="8" class="border border-gray-300 px-4 py-2 text-center text-gray-500">Aucun paiement trouvé</td>
-            </tr>
-          <?php endif; ?>
-        </tbody>
-        <tfoot class="bg-gray-50">
-          <tr>
-            <td colspan="9" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en USD</td>
-            <td class="border border-gray-300 px-4 py-2 font-semibold">$<?php echo number_format($total_usd, 2); ?></td>
-          </tr>
-          <tr>
-            <td colspan="9" class="border border-gray-300 px-4 py-2 font-semibold text-right">Total en Fc</td>
-            <td class="border border-gray-300 px-4 py-2 font-semibold"><?php echo number_format($total_fc, 2); ?> Fc</td>
-          </tr>
-        </tfoot>
-      </table>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <?php if (count($payments) > 0): ?>
+                <?php $id = 1; ?>
+                <?php foreach ($payments as $row): ?>
+                  <?php
+                  // Determine currency based on montant_payer value
+                  $devise_montant_payer = strpos($row['montant_payer'], '$') !== false ? '$' : 'Fc';
+
+                  // Extract numeric values and currency for calculations
+                  $total_annuel_numeric = (int) filter_var($row['total_annuel'], FILTER_SANITIZE_NUMBER_INT);
+                  $montant_payer_numeric = (int) filter_var($row['montant_payer'], FILTER_SANITIZE_NUMBER_INT);
+                  $devise_total_annuel = preg_replace('/[0-9,\s\.]+/', '', $row['total_annuel']);
+
+                  $reste = $total_annuel_numeric - $montant_payer_numeric;
+                  $devise_reste = $devise_total_annuel ?: $devise_montant_payer; // Use annual currency, fallback to paid
+                  ?>
+                  <tr class="hover:bg-gray-50 transition-colors duration-150" id="row-<?php echo $row['id']; ?>">
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800"><?php echo $id++; ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['nom_eleve']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['postnom_eleve']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['prenom_eleve']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['nom_parent']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['classe_eleve']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['montant_payer']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($devise_montant_payer); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['motif_paiement']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['date_paiement']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['total_annuel']); ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm">
+                      <?php if ($reste > 0): ?>
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                          Reste: <?php echo number_format($reste, 2) . ' ' . $devise_reste; ?>
+                        </span>
+                      <?php else: ?>
+                        <span
+                          class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          Payé
+                        </span>
+                      <?php endif; ?>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($devise_montant_payer); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
+                        class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 mb-1 lg:mb-0 lg:mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                          stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Imprimer
+                      </button>
+                      <button type="button" onclick="showDeleteModal(<?php echo $row['id']; ?>)"
+                        class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                          stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <tr>
+                  <td colspan="13" class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Aucun paiement
+                    trouvé.</td>
+                </tr>
+              <?php endif; ?>
+            </tbody>
+            <tfoot class="bg-gray-100">
+              <tr>
+                <td colspan="9"
+                  class="px-4 py-3 text-right text-sm font-semibold text-gray-700 uppercase tracking-wider">Total en USD
+                </td>
+                <td colspan="4" class="px-4 py-3 text-left text-sm font-bold text-gray-900">
+                  $<?php echo number_format($total_usd, 2); ?></td>
+              </tr>
+              <tr>
+                <td colspan="9"
+                  class="px-4 py-3 text-right text-sm font-semibold text-gray-700 uppercase tracking-wider">Total en CDF
+                </td>
+                <td colspan="4" class="px-4 py-3 text-left text-sm font-bold text-gray-900">
+                  <?php echo number_format($total_fc, 2); ?> Fc</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
     </div>
-    <!-- footer -->
-    <footer class="footer galaxy-border-none mt-8">
-      <div class="container mx-auto px-4">
-      <div class="text-center">
-        <p class="mb-0 text-blue">&copy;
-      <script>document.write(new Date().getFullYear())</script> Administration <i class="mdi mdi-heart text-blue-500"></i> by C.S.P.P.UNILU
-        </p>
-      </div>
-      </div>
+
+    <footer class="mt-8 text-white text-center">
+      <p class="mb-0 text-opacity-80">
+        &copy;
+        <script>document.write(new Date().getFullYear())</script> Administration <span
+          class="text-red-300">&hearts;</span> by C.S.P.P.UNILU
+      </p>
     </footer>
-    <!-- end Footer -->
   </div>
 
-    <script>
-        function imprimerRecu(nom, classe, montant, devise, motif, date) {
-            const recu = `
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <div class="text-center p-5">
+        <svg class="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="mb-5 text-lg font-normal text-gray-800">Êtes-vous sûr de vouloir supprimer ce paiement ?</h3>
+        <form id="deleteForm" method="POST" class="inline-block">
+          <input type="hidden" name="delete_id" id="modalDeleteId">
+          <button type="submit"
+            class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center mr-2">
+            Oui, je suis sûr
+          </button>
+        </form>
+        <button type="button" onclick="hideDeleteModal()"
+          class="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">
+          Non, annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function imprimerRecu(nom, classe, montant, devise, motif, date, reste, deviseReste) {
+      const statusText = parseFloat(reste) > 0 ? `Reste à payer: ${reste} ${deviseReste}` : 'Payé';
+      const statusColor = parseFloat(reste) > 0 ? '#ef4444' : '#22c55e'; // Tailwind red-500 vs green-500
+
+      const recu = `
+                <!doctype html>
                 <html>
                     <head>
                         <title>Reçu de paiement</title>
+                        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
                         <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            .recu-container { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background-color: #f9f9f9; }
-                            .recu-header { text-align: center; margin-bottom: 20px; }
-                            .recu-header h2 { margin: 0; font-size: 24px; color: #333; }
-                            .recu-details { margin-bottom: 20px; }
-                            .recu-details table { width: 100%; border-collapse: collapse; }
-                            .recu-details th, .recu-details td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                            .recu-details th { background-color: #f2f2f2; }
-                            .recu-footer { text-align: center; margin-top: 20px; }
-                            .recu-footer p { margin: 0; font-size: 14px; color: #777; }
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; color: #333; }
+                            .recu-container { max-width: 650px; margin: 30px auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+                            .recu-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; }
+                            .recu-header h2 { margin: 0; font-size: 2.25rem; color: #1e40af; font-weight: 700; }
+                            .recu-header p { margin-top: 5px; font-size: 1rem; color: #64748b; }
+                            .recu-details { margin-bottom: 30px; }
+                            .recu-details table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+                            .recu-details th, .recu-details td { padding: 12px 15px; text-align: left; vertical-align: top; }
+                            .recu-details th { background-color: #eff6ff; color: #1e40af; font-weight: 600; border-radius: 8px 0 0 8px; }
+                            .recu-details td { background-color: #f8fafc; border-radius: 0 8px 8px 0; }
+                            .recu-details tr:last-child th, .recu-details tr:last-child td { border-bottom: none; }
+                            .recu-total { margin-top: 20px; text-align: right; font-size: 1.125rem; font-weight: 600; color: #1e40af; }
+                            .recu-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
+                            .recu-footer p { margin: 0; font-size: 0.9rem; color: #718096; }
+                            .status-paid { color: #22c55e; font-weight: bold; }
+                            .status-remaining { color: #ef4444; font-weight: bold; }
                         </style>
                     </head>
                     <body>
                         <div class="recu-container">
                             <div class="recu-header">
-                                <h2>Reçu de paiement</h2>
+                                <h2>REÇU DE PAIEMENT</h2>
+                                <p>C.S.P.P.UNILU</p>
                             </div>
                             <div class="recu-details">
                                 <table>
@@ -162,11 +292,11 @@
                                         <td>${classe}</td>
                                     </tr>
                                     <tr>
-                                        <th>Montant payé</th>
-                                        <td>${montant}</td>
+                                        <th>Montant Payé</th>
+                                        <td>${montant} ${devise}</td>
                                     </tr>
                                     <tr>
-                                        <th>Motif</th>
+                                        <th>Motif de paiement</th>
                                         <td>${motif}</td>
                                     </tr>
                                     <tr>
@@ -175,110 +305,127 @@
                                     </tr>
                                     <tr>
                                         <th>Statut</th>
-                                        <?php if ($reste > 0): ?>
-                                        <span class="text-red-500">Reste à payer: <?php echo $reste . ' ' . $devise; ?></span>
-                                        <?php else: ?>
-                                          <span class="text-green-500">Payé</span>
-                                        <?php endif; ?>
-                                        <td><?php echo $reste > 0 ? 'Reste à payer: ' . $reste . ' ' . $devise : 'Payé'; ?></td>
+                                        <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
                                     </tr>
                                 </table>
                             </div>
                             <div class="recu-footer">
-                                <p>Merci pour votre paiement.</p>
+                                <p>Merci pour votre paiement. Pour toute question, veuillez nous contacter.</p>
+                                <p class="text-xs mt-2">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
                             </div>
                         </div>
                     </body>
                 </html>
             `;
-            const printWindow = window.open('', '', 'height=600,width=800');
-            printWindow.document.write(recu);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    </script>
+      const printWindow = window.open('', '_blank', 'height=600,width=800');
+      printWindow.document.write(recu);
+      printWindow.document.close();
+      printWindow.print();
+    }
 
-    <!-- SEARCH LOGO -->
-    <script>
-        let a = 0;
-        let masque = document.createElement('div');
-        let logo = document.createElement('img');
-        let cercle = document.createElement('div');
+    // --- Delete Modal Functions ---
+    const deleteModal = document.getElementById('deleteModal');
+    const modalDeleteId = document.getElementById('modalDeleteId');
 
-        let angle = 0;
-        let scale = 1;
-        let opacityLogo = 1;
+    function showDeleteModal(id) {
+      modalDeleteId.value = id;
+      deleteModal.style.display = 'flex'; // Use flex to center the modal
+    }
 
-        window.addEventListener('load', () => {
-            a = 1;
+    function hideDeleteModal() {
+      deleteModal.style.display = 'none';
+    }
 
-            // Le cercle et le logo commencent à bouger immédiatement
-            anime = setInterval(() => {
-                angle += 10; // Vitesse de rotation du cercle
-                cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    // Close modal when clicking outside of it
+    window.onclick = function (event) {
+      if (event.target == deleteModal) {
+        hideDeleteModal();
+      }
+    }
+  </script>
 
-                // Zoom progressif du logo
-                scale += 0.005;
-                opacityLogo -= 0.005;
+  </script>
+  <!-- SEARCH LOGO -->
+  <script>
+    let a = 0;
+    let masque = document.createElement('div');
+    let logo = document.createElement('img');
+    let cercle = document.createElement('div');
 
-                logo.style.transform = `scale(${scale})`;
-                logo.style.opacity = opacityLogo;
+    let angle = 0;
+    let scale = 1;
+    let opacityLogo = 1;
 
-            }, 20);
+    window.addEventListener('load', () => {
+      a = 1;
 
-            // Après 1 seconde, on arrête l'animation
-            setTimeout(() => {
-                clearInterval(anime);
-                masque.style.opacity = '0';
-            }, 1000);
+      // Le cercle et le logo commencent à bouger immédiatement
+      anime = setInterval(() => {
+        angle += 10; // Vitesse de rotation du cercle
+        cercle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
 
-            setTimeout(() => {
-                masque.style.visibility = 'hidden';
-            }, 1500);
-        });
+        // Zoom progressif du logo
+        scale += 0.005;
+        opacityLogo -= 0.005;
 
-        // Création du masque
-        masque.style.width = '100%';
-        masque.style.height = '100vh';
-        masque.style.zIndex = 100000;
-        masque.style.background = '#ffffff';
-        masque.style.position = 'fixed';
-        masque.style.top = '0';
-        masque.style.left = '0';
-        masque.style.opacity = '1';
-        masque.style.transition = '0.5s ease';
-        masque.style.display = 'flex';
-        masque.style.justifyContent = 'center';
-        masque.style.alignItems = 'center';
-        document.body.appendChild(masque);
+        logo.style.transform = `scale(${scale})`;
+        logo.style.opacity = opacityLogo;
 
-        // Création du logo
-        logo.setAttribute('src', '../images/logo_pp.png');
-        logo.style.width = '10vh';
-        logo.style.height = '10vh';
-        logo.style.position = 'relative';
-        logo.style.zIndex = '2';
-        logo.style.transition = '0.2s'; // Transition pour plus de fluidité
-        masque.appendChild(logo);
+      }, 20);
 
-        // Création du cercle autour du logo
-        cercle.style.width = '15vh';
-        cercle.style.height = '15vh';
-        cercle.style.border = '3px solid #e12c4e';
-        cercle.style.borderTop = '3px solid #e49100';
-        cercle.style.borderRadius = '50%';
-        cercle.style.position = 'absolute';
-        cercle.style.top = '50%';
-        cercle.style.left = '50%';
-        cercle.style.transform = 'translate(-50%, -50%)';
-        cercle.style.boxSizing = 'border-box';
-        cercle.style.zIndex = '1';
-        masque.appendChild(cercle);
+      // Après 1 seconde, on arrête l'animation
+      setTimeout(() => {
+        clearInterval(anime);
+        masque.style.opacity = '0';
+      }, 1000);
 
-        // Variables de l'animation
-        let anime;
+      setTimeout(() => {
+        masque.style.visibility = 'hidden';
+      }, 1500);
+    });
 
-    </script>
+    // Création du masque
+    masque.style.width = '100%';
+    masque.style.height = '100vh';
+    masque.style.zIndex = 100000;
+    masque.style.background = '#ffffff';
+    masque.style.position = 'fixed';
+    masque.style.top = '0';
+    masque.style.left = '0';
+    masque.style.opacity = '1';
+    masque.style.transition = '0.5s ease';
+    masque.style.display = 'flex';
+    masque.style.justifyContent = 'center';
+    masque.style.alignItems = 'center';
+    document.body.appendChild(masque);
+
+    // Création du logo
+    logo.setAttribute('src', '../images/logo_pp.png');
+    logo.style.width = '10vh';
+    logo.style.height = '10vh';
+    logo.style.position = 'relative';
+    logo.style.zIndex = '2';
+    logo.style.transition = '0.2s'; // Transition pour plus de fluidité
+    masque.appendChild(logo);
+
+    // Création du cercle autour du logo
+    cercle.style.width = '15vh';
+    cercle.style.height = '15vh';
+    cercle.style.border = '3px solid #e12c4e';
+    cercle.style.borderTop = '3px solid #e49100';
+    cercle.style.borderRadius = '50%';
+    cercle.style.position = 'absolute';
+    cercle.style.top = '50%';
+    cercle.style.left = '50%';
+    cercle.style.transform = 'translate(-50%, -50%)';
+    cercle.style.boxSizing = 'border-box';
+    cercle.style.zIndex = '1';
+    masque.appendChild(cercle);
+
+    // Variables de l'animation
+    let anime;
+
+  </script>
 </body>
 
 </html>

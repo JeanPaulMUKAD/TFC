@@ -252,10 +252,47 @@ class AuthController
         }
     }
 
+    //INSCRIPTIONS PAAR CLASSE
+    public function getInscriptionsParClasse()
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM inscriptions ORDER BY classe_selection ASC");
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $inscriptions = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $inscriptions[] = $row;
+        }
+
+        return $inscriptions;
+    }
+
+
+    // TOUTES LES INSCRIPTIONS
+    public function getToutesLesInscriptions()
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM inscriptions ORDER BY classe_selection, nom_eleve");
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $eleves = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $eleves[] = $row;
+        }
+
+        return $eleves;
+    }
+
+
+
+
+
     //PAIEMENT EN LIGNE
     public function handlePaymentAndReport(array $postData): array
     {
-        // ... (votre code existant pour handlePaymentAndReport) ...
+
+
+        // Récupération sécurisée des données
         $conn = $this->conn;
 
         // Rapport de paiement
@@ -274,9 +311,9 @@ class AuthController
             $total_paye = ($result_total_paye && $result_total_paye->num_rows > 0) ? (float) $result_total_paye->fetch_assoc()['total_paye'] : 0;
 
             // récupérer les paiements
-            $sql_report = "SELECT montant_payer, motif_paiement, transaction_id, payment_status, classe_eleve, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, nom_parent, adresse_eleve, date_paiement
-                            FROM paiement
-                            WHERE nom_eleve = '$nom_eleve_report' AND classe_eleve = '$classe_report'";
+            $sql_report = "SELECT montant_payer, motif_paiement, transaction_id, payment_status, classe_eleve 
+                   FROM paiement 
+                   WHERE nom_eleve = '$nom_eleve_report' AND classe_eleve = '$classe_report'";
 
             $result_report = $conn->query($sql_report);
 
@@ -321,12 +358,12 @@ class AuthController
                 $reste_a_payer = $total_annuel - $nouveau_total_paye;
 
                 $sql = "INSERT INTO paiement (
-                                matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_eleve, nom_parent, adresse_eleve,
-                                montant_payer, devise, motif_paiement, transaction_id, payment_status, total_annuel
-                            ) VALUES (
-                                '$matricule', '$nom_eleve', '$postnom_eleve', '$prenom_eleve', '$sexe_eleve', '$classe_eleve', '$nom_parent', '$adresse_eleve',
-                                '$montant_payer', '$devise', '$motif_paiement', '$transaction_id', 'success', '$total_annuel'
-                            )";
+                        matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_eleve, nom_parent, adresse_eleve,
+                        montant_payer, devise, motif_paiement, transaction_id, payment_status, total_annuel
+                    ) VALUES (
+                        '$matricule', '$nom_eleve', '$postnom_eleve', '$prenom_eleve', '$sexe_eleve', '$classe_eleve', '$nom_parent', '$adresse_eleve',
+                        '$montant_payer', '$devise', '$motif_paiement', '$transaction_id', 'success', '$total_annuel'
+                    )";
                 if ($conn->query($sql) === TRUE) {
                     return ['success' => true, 'message' => "Paiement enregistré avec succès."];
                 } else {
@@ -340,8 +377,6 @@ class AuthController
         // Si aucune condition remplie
         return ['success' => false, 'message' => "Action non reconnue."];
     }
-
-    
 
     //HISTORIQUE DES PAIEMENTS
     public function getPaymentHistory()
@@ -410,7 +445,6 @@ class AuthController
             'percentage_icon' => $percentageIcon
         ];
     }
-    
 
     //PAIEMENT EN PRESENTIEL
     public function processCashPayment(
@@ -460,6 +494,7 @@ class AuthController
             return ['success' => false, 'message' => "Erreur: " . $stmt->error];
         }
     }
+    //GERER LDES INFORMATIONS DE L'ELEVE
     public function getStudentInfoByMatricule($matricule)
     {
         $conn = $this->conn;
@@ -496,6 +531,7 @@ class AuthController
             'adresse_eleve' => $row['adresse_eleve']
         ];
     }
+    //RECHERCGER ELEVE PAR SON MATRICULE
     public function rechercherEleveParMatricule($matricule)
     {
         // Valider le matricule
@@ -611,7 +647,7 @@ class AuthController
             return ['success' => false, 'message' => "Erreur d'inscription de l'élève : " . $stmt->error];
         }
     }
-
+    //MODIFIER ELEVE
 
     public function modifierEleve($id, $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee)
     {
@@ -640,7 +676,47 @@ class AuthController
         }
     }
 
+    public function modifierEleves($data)
+    {
+        $conn = $this->conn;
+        $id = $data['id'];
+        $nom = $data['nom_eleve'];
+        $postnom = $data['postnom_eleve'];
+        $prenom = $data['prenom_eleve'];
+        $sexe = $data['sexe_eleve'];
+        $classe = $data['classe_selection'];
+        $nom_parent = $data['nom_parent'];
+        $adresse = $data['adresse_eleve'];
+        $annee = $data['annee_inscription'];
 
+        $stmt = $conn->prepare("UPDATE inscriptions SET nom_eleve=?, postnom_eleve=?, prenom_eleve=?, sexe_eleve=?, classe_selection=?, nom_parent=?, adresse_eleve=?, annee_inscription=? WHERE id=?");
+        if (!$stmt) {
+            error_log("Erreur SQL préparation modification : " . $conn->error);
+            return false;
+        }
+        $stmt->bind_param("ssssssssi", $nom, $postnom, $prenom, $sexe, $classe, $nom_parent, $adresse, $annee, $id);
+
+        if ($stmt->execute()) {
+            $annee_suffix = substr($annee, -2);
+            $matricule = strtoupper($annee_suffix . substr($nom, 0, 1) . substr($postnom, 0, 1) . $id);
+
+            $stmt_update = $conn->prepare("UPDATE inscriptions SET matricule=? WHERE id=?");
+            if (!$stmt_update) {
+                error_log("Erreur SQL update matricule : " . $conn->error);
+                return false;
+            }
+            $stmt_update->bind_param("si", $matricule, $id);
+            $stmt_update->execute();
+            return true; // Retourne true si tout va bien
+        } else {
+            error_log("Erreur lors de la modification: " . $stmt->error);
+            return false;
+        }
+    }
+
+
+
+    //SUPPRIMER ELEVE
     public function supprimerEleveParMatricule($matricule)
     {
         $conn = $this->conn;
@@ -670,6 +746,42 @@ class AuthController
             return ['success' => true, 'message' => "Suppression réussie pour le matricule $matricule."];
         } else {
             return ['success' => false, 'message' => "Erreur lors de la suppression : " . $stmt_del->error];
+        }
+    }
+
+    public function obtenirInfosEleveParId($id)
+    {
+        $conn = $this->conn;
+        $stmt = $conn->prepare("SELECT * FROM inscriptions WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            error_log("Erreur SQL préparation obtenirInfosEleveParId : " . $conn->error);
+            return false;
+        }
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
+            return $result->fetch_assoc();
+        } else {
+            return false;
+        }
+    }
+
+    public function supprimerEleve($id)
+    {
+        $conn = $this->conn;
+        $stmt_del = $conn->prepare("DELETE FROM inscriptions WHERE id=?");
+        if (!$stmt_del) {
+            error_log("Erreur SQL préparation suppression : " . $conn->error);
+            return false;
+        }
+        $stmt_del->bind_param("i", $id);
+
+        if ($stmt_del->execute()) {
+            return true;
+        } else {
+            error_log("Erreur lors de la suppression : " . $stmt_del->error);
+            return false;
         }
     }
 
@@ -706,6 +818,7 @@ class AuthController
         }
     }
 
+    //OBTENIR PAIEMENTS PR MATRICULE
     public function obtenirPaiementsParMatricule($matricule)
     {
         // Valider le matricule

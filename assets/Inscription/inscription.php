@@ -218,7 +218,7 @@
                                                             name="postnom_eleve" class="form-control" placeholder="Veillez entrer le post-nom" required></div>
                                                     <div class="mb-3"><label>Prénom</label><input type="text"
                                                             name="prenom_eleve" class="form-control" placeholder="Veillez entrer le prénom" required></div>
-                                                    <div class="mb-3"><label>Sexe</label>
+                                                    <div class="mb-3"><label>Sexe de l’élève</label>
                                                         <select name="sexe_eleve" class="form-control" required>
                                                             <option value="">Sélectionnez</option>
                                                             <option value="M">Masculin</option>
@@ -257,11 +257,11 @@
                                                     </div>
                                                     <div class="mb-3"><label>Nom du parent</label>
                                                         <input type="text" name="nom_parent" class="form-control"
-                                                            placeholder="Entrez le nom du parent(tuteur) de l'eleve" required>
+                                                            placeholder="Entrez le nom du parent(tuteur) de l’élève" required>
                                                     </div>
-                                                    <div class="mb-3"><label>Adresse</label>
+                                                    <div class="mb-3"><label>Adresse de l’élève</label>
                                                         <input type="text" name="adresse_eleve" class="form-control"
-                                                            placeholder="Entrez l'adresse de l'eleve" required>
+                                                            placeholder="Entrez l'adresse de l’élève" required>
                                                     </div>
                                                     <div class="mb-3"><label>Année d'inscription</label>
                                                         <input type="text" name="annee_inscription" class="form-control"
@@ -291,7 +291,7 @@
                                                             name="postnom_eleve" class="form-control" placeholder="Veillez entrer le post-nom" required></div>
                                                     <div class="mb-3"><label>Nouveau prénom</label><input type="text"
                                                             name="prenom_eleve" class="form-control" placeholder="Veillez entrer le prénom" required></div>
-                                                    <div class="mb-3"><label>Sexe</label>
+                                                    <div class="mb-3"><label>Sexe de l’élève</label>
                                                         <select name="sexe_eleve" class="form-control" required>
                                                             <option value="">Sélectionnez</option>
                                                             <option value="M">Masculin</option>
@@ -332,9 +332,9 @@
                                                         <input type="text" name="nom_parent" class="form-control"
                                                             placeholder="Entrez le nom du parent(tuteur) de l'eleve" required>
                                                     </div>
-                                                    <div class="mb-3"><label>Adresse</label>
+                                                    <div class="mb-3"><label>Adresse de l’élève</label>
                                                         <input type="text" name="adresse_eleve" class="form-control"
-                                                            placeholder="Entrez l'adresse de l'eleve" required>
+                                                            placeholder="Entrez l'adresse de l’élève" required>
                                                     </div>
                                                     <div class="mb-3"><label>Année d'inscription</label>
                                                         <input type="text" name="annee_inscription" class="form-control"
