@@ -139,13 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
             <!-- Contenu centré -->
             <div class="relative z-10 max-w-4xl w-full text-center space-y-6 p-8">
                 <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full text-white bg-white/10">
-                    <span class="text-green-700">● </span>ESPACE DU SECRÉTAIRE ACADÉMIQUE
+                    <span class="text-green-700">● </span>ESPACE DU SECRÉTAIRE SCOLAIRE
                 </div>
-
+                <h1 class="text-4xl">Bonjour <?php echo $_SESSION['username']?></h1>
                 <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
-                    Bienvenue sur la page du<br>
+                    Bienvenue sur votre <br>
                     <span
-                        class="inline-block bg-gradient-to-r from-red-600 to-orange-500 px-2 py-1 rounded-md text-white">Secrétaire</span>
+                        class="inline-block bg-gradient-to-r from-red-600 to-orange-500 px-2 py-1 rounded-md text-white">page</span>
                 </h1>
 
                 <p class="text-lg text-gray-300 mt-2">
@@ -265,6 +265,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
         </div>
     </section>
 
+    
+
     <div id="modalModifier" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white text-black">
             <h3 class="text-lg font-bold mb-4">Modifier l'élève</h3>
@@ -315,11 +317,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
                 </div>
                 <div class="items-center px-4 py-3">
                     <button type="submit"
-                        class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300">
+                        class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white text-base font-medium rounded-md w-full shadow-sm ">
                         Enregistrer
                     </button>
                     <button type="button" onclick="closeModifierModal()"
-                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm transition hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
                         Annuler
                     </button>
                 </div>

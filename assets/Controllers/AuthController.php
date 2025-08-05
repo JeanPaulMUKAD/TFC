@@ -393,6 +393,8 @@ class AuthController
     }
 
     //HISTORIQUE DES PAIEMENTS
+
+
     public function getPaymentHistory()
     {
         $payments = [];
@@ -413,41 +415,22 @@ class AuthController
         }
 
         // Calcul total USD (montant_payer contient le signe $)
-        $sqlTotalUsd = "SELECT SUM(REPLACE(REPLACE(montant_payer, '$', ''), ',', '') + 0) AS total_usd 
-                    FROM paiement WHERE montant_payer LIKE '%$%'";
+        $sqlTotalUsd = "SELECT SUM(CAST(REPLACE(montant_payer, '$', '') AS DECIMAL(10, 2))) AS total_usd 
+                    FROM paiement WHERE devise = '$'";
         $resultUsd = $this->conn->query($sqlTotalUsd);
         if ($resultUsd && $rowUsd = $resultUsd->fetch_assoc()) {
             $totalUsd = (float) $rowUsd['total_usd'];
         }
 
         // Calcul total Fc (montant_payer contient 'Fc')
-        $sqlTotalFc = "SELECT SUM(REPLACE(REPLACE(montant_payer, 'Fc', ''), ',', '') + 0) AS total_fc 
-                   FROM paiement WHERE montant_payer LIKE '%Fc%'";
+        $sqlTotalFc = "SELECT SUM(CAST(REPLACE(montant_payer, 'Fc', '') AS DECIMAL(10, 2))) AS total_fc 
+                   FROM paiement WHERE devise = 'Fc'";
         $resultFc = $this->conn->query($sqlTotalFc);
         if ($resultFc && $rowFc = $resultFc->fetch_assoc()) {
             $totalFc = (float) $rowFc['total_fc'];
         }
 
-        // Nombre total de paiements par classe
-        $sqlPaymentsByClass = "SELECT classe_eleve, COUNT(*) AS total_paiements 
-                          FROM paiement WHERE montant_payer IS NOT NULL GROUP BY classe_eleve";
-        $resultByClass = $this->conn->query($sqlPaymentsByClass);
-        if ($resultByClass && $resultByClass->num_rows > 0) {
-            while ($rowClass = $resultByClass->fetch_assoc()) {
-                $paymentsByClass[$rowClass['classe_eleve']] = (int) $rowClass['total_paiements'];
-            }
-        }
-
-        // Valeur précédente pour calcul du pourcentage (à adapter selon contexte)
-        $previousPayments = 100; // Valeur de référence, par ex. stockée dans une config ou une autre table
-        $currentPayments = array_sum($paymentsByClass);
-
-        if ($previousPayments > 0) {
-            $percentageChange = (($currentPayments - $previousPayments) / $previousPayments) * 100;
-        }
-
-        $percentageClass = $percentageChange >= 0 ? "text-success" : "text-danger";
-        $percentageIcon = $percentageChange >= 0 ? "ri-arrow-right-up-line" : "ri-arrow-right-down-line";
+        // ... le reste de votre code est correct ...
 
         return [
             'payments' => $payments,
@@ -1074,7 +1057,8 @@ class AuthController
         return $totalPaye;
     }
 
-     public function obtenirEnfantsEtStatutPaiementParIdParent($parentId)
+
+    public function obtenirEnfantsEtStatutPaiementParIdParent($parentId)
     {
         $enfantsAvecStatut = [];
 
@@ -1094,7 +1078,7 @@ class AuthController
 
         while ($enfant = $resultEnfants->fetch_assoc()) {
             $matricule = $enfant['matricule'];
-            $total_annuel_du = (float)($enfant['total_annuel'] ?? 0.0);
+            $total_annuel_du = (float) ($enfant['total_annuel'] ?? 0.0);
 
             // Pour chaque enfant, récupérer tous ses paiements
             $paiementsEnfant = [];
@@ -1111,7 +1095,7 @@ class AuthController
                 $resultPaiements = $stmtPaiements->get_result();
                 while ($p = $resultPaiements->fetch_assoc()) {
                     $paiementsEnfant[] = $p;
-                    $montant_paye_total += (float)($p['montant_payer'] ?? 0.0);
+                    $montant_paye_total += (float) ($p['montant_payer'] ?? 0.0);
                 }
                 $stmtPaiements->close();
             }
@@ -1120,23 +1104,25 @@ class AuthController
 
             // Ajouter toutes les infos de l'enfant et son statut/paiements agrégés
             $enfantsAvecStatut[] = [
-                'matricule'         => $enfant['matricule'],
-                'nom_eleve'         => $enfant['nom_eleve'],
-                'postnom_eleve'     => $enfant['postnom_eleve'],
-                'prenom_eleve'      => $enfant['prenom_eleve'],
-                'sexe_eleve'        => $enfant['sexe_eleve'],
-                'classe_selection'  => $enfant['classe_selection'],
-                'adresse_eleve'     => $enfant['adresse_eleve'],
-                'total_annuel'      => $total_annuel_du,
-                'montant_paye_total'=> $montant_paye_total,
-                'solde_du'          => $solde_du,
-                'paiements'         => $paiementsEnfant // Historique détaillé des paiements pour cet enfant
+                'matricule' => $enfant['matricule'],
+                'nom_eleve' => $enfant['nom_eleve'],
+                'postnom_eleve' => $enfant['postnom_eleve'],
+                'prenom_eleve' => $enfant['prenom_eleve'],
+                'sexe_eleve' => $enfant['sexe_eleve'],
+                'classe_selection' => $enfant['classe_selection'],
+                'adresse_eleve' => $enfant['adresse_eleve'],
+                'total_annuel' => $total_annuel_du,
+                'montant_paye_total' => $montant_paye_total,
+                'solde_du' => $solde_du,
+                'paiements' => $paiementsEnfant // Historique détaillé des paiements pour cet enfant
             ];
         }
         $stmtEnfants->close();
 
         return ['success' => true, 'enfants' => $enfantsAvecStatut];
     }
+
+
 
 
 

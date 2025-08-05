@@ -83,7 +83,7 @@ if ($result2 && $row2 = $result2->fetch_assoc()) {
     <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 text-white shadow-lg z-50 flex flex-col">
         <div class="p-6 border-b border-gray-700">
             <div class="text-2xl font-extrabold flex items-center">
-                <img src="/assets/images/logo_pp.png" alt="Logo" class="h-10 w-10 mr-2">
+                <img src="/assets/images/logo_pp2.png" alt="Logo" class="h-10 w-10 mr-2">
                 <span class="text-white">C.S.P.P</span><span class="text-green-400">.UNILU</span>
             </div>
             <p class="text-sm text-center text-gray-400 mt-2">Administration</p>
@@ -112,7 +112,7 @@ if ($result2 && $row2 = $result2->fetch_assoc()) {
     </aside>
 
     <div class="ml-64 flex-1 min-h-screen p-8">
-        <header class="flex items-center justify-between mb-10 bg-white p-6 rounded-xl shadow-md">
+        <header class="flex items-center justify-between mb-10 bg-white p-6 rounded-xl ">
             <h1 class="text-4xl font-extrabold text-gray-800">Bienvenue, <span class="text-green-600"><?php echo htmlspecialchars($_SESSION['username']); ?></span></h1>
             <span class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2">
                 <i class="fas fa-shield-alt"></i>
@@ -149,31 +149,9 @@ if ($result2 && $row2 = $result2->fetch_assoc()) {
                     <p class="text-xs text-gray-500 mt-4 text-center">Total des options de paiement</p>
                 </div>
 
-                <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition duration-300 card-enter" style="animation-delay: 0.3s;">
-                    <div class="flex items-center justify-between">
-                        <div class="bg-blue-100 text-blue-600 p-4 rounded-full">
-                            <i class="fas fa-chart-line text-3xl"></i>
-                        </div>
-                        <div class="text-right">
-                            <h3 class="text-sm text-gray-500 font-medium">Suivi des opérations</h3>
-                            <p class="text-4xl font-bold text-gray-800 mt-1">Actif</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-4 text-center">Transparence et efficacité</p>
-                </div>
+               
 
-                <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition duration-300 card-enter" style="animation-delay: 0.4s;">
-                    <div class="flex items-center justify-between">
-                        <div class="bg-yellow-100 text-yellow-600 p-4 rounded-full">
-                            <i class="fas fa-hourglass-half text-3xl"></i>
-                        </div>
-                        <div class="text-right">
-                            <h3 class="text-sm text-gray-500 font-medium">Opérations en attente</h3>
-                            <p class="text-4xl font-bold text-gray-800 mt-1">5</p>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-4 text-center">Nécessitent votre attention</p>
-                </div>
+               
             </div>
         </section>
 
@@ -198,7 +176,7 @@ if ($result2 && $row2 = $result2->fetch_assoc()) {
 
         <section class="mt-12">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">Informations système</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm text-gray-700 bg-white p-6 rounded-xl shadow-md">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm text-gray-700 bg-white p-6 rounded-xl ">
                 <div class="flex items-center gap-3">
                     <i class="fas fa-lock text-green-500 text-xl"></i>
                     <div>

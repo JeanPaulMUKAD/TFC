@@ -11,6 +11,7 @@ $payments_by_class = $data['payments_by_class'];
 $percentage_change = $data['percentage_change'];
 $percentage_class = $data['percentage_class'];
 $percentage_icon = $data['percentage_icon'];
+
 // Handle delete request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
   $paymentId = $_POST['delete_id'];
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
 <head>
   <meta charset="utf-8" />
   <title>Historique des paiements | Administration C.S.P.P.UNILU</title>
+  <link rel="shortcut icon" href="/assets/images/logo_pp.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
@@ -74,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
   </style>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-green-400 to-indigo-700 flex flex-col items-center justify-center py-8">
+<body
+  class="min-h-screen bg-gradient-to-br from-green-400 to-indigo-700 flex flex-col items-center justify-center py-8">
   <div class="container mx-auto px-4 w-full lg:w-4/5 xl:w-3/4">
     <div class="mb-6">
       <a href="../../Dashboad.php" class="text-white text-sm font-medium hover:underline flex items-center">
@@ -99,11 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Post-nom
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parent</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parents
+                </th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Classe</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant
                   Payé</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devises
+                </th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Motif</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Annuel</th>
@@ -125,30 +130,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                   $devise_total_annuel = preg_replace('/[0-9,\s\.]+/', '', $row['total_annuel']);
 
                   $reste = $total_annuel_numeric - $montant_payer_numeric;
-                  $devise_reste = $devise_total_annuel ?: $devise_montant_payer; // Use annual currency, fallback to paid
+                  $devise_reste = $devise_total_annuel ?: $devise_montant_payer;
                   ?>
                   <tr class="hover:bg-gray-50 transition-colors duration-150" id="row-<?php echo $row['id']; ?>">
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800"><?php echo $id++; ?></td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['nom_eleve']); ?></td>
+                      <?php echo htmlspecialchars($row['nom_eleve']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['postnom_eleve']); ?></td>
+                      <?php echo htmlspecialchars($row['postnom_eleve']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['prenom_eleve']); ?></td>
+                      <?php echo htmlspecialchars($row['prenom_eleve']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['nom_parent']); ?></td>
+                      <?php echo htmlspecialchars($row['nom_parent']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['classe_eleve']); ?></td>
+                      <?php echo htmlspecialchars($row['classe_eleve']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['montant_payer']); ?></td>
+                      <?php echo htmlspecialchars($row['montant_payer']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($devise_montant_payer); ?></td>
+                      <?php echo htmlspecialchars($row['devise']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['motif_paiement']); ?></td>
+                      <?php echo htmlspecialchars($row['motif_paiement']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['date_paiement']); ?></td>
+                      <?php echo htmlspecialchars($row['date_paiement']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['total_annuel']); ?></td>
+                      <?php echo htmlspecialchars($row['total_annuel']); ?>
+                    </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm">
                       <?php if ($reste > 0): ?>
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
@@ -163,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
                       <button
-                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($devise_montant_payer); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
+                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['postnom_eleve']); ?>', '<?php echo addslashes($row['prenom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($row['devise']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
                         class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 mb-1 lg:mb-0 lg:mr-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
                           stroke="currentColor">
@@ -197,14 +212,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                   class="px-4 py-3 text-right text-sm font-semibold text-gray-700 uppercase tracking-wider">Total en USD
                 </td>
                 <td colspan="4" class="px-4 py-3 text-left text-sm font-bold text-gray-900">
-                  $<?php echo number_format($total_usd, 2); ?></td>
+                  $<?php echo number_format($total_usd, 2); ?>
+                </td>
               </tr>
               <tr>
                 <td colspan="9"
                   class="px-4 py-3 text-right text-sm font-semibold text-gray-700 uppercase tracking-wider">Total en CDF
                 </td>
                 <td colspan="4" class="px-4 py-3 text-left text-sm font-bold text-gray-900">
-                  <?php echo number_format($total_fc, 2); ?> Fc</td>
+                  <?php echo number_format($total_fc, 2); ?> Fc
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -246,102 +263,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
   </div>
 
   <script>
-    function imprimerRecu(nom, classe, montant, devise, motif, date, reste, deviseReste) {
+    function imprimerRecu(nom, postnom, prenom, classe, montant, devise, motif, date, reste, deviseReste) {
       const statusText = parseFloat(reste) > 0 ? `Reste à payer: ${reste} ${deviseReste}` : 'Payé';
       const statusColor = parseFloat(reste) > 0 ? '#ef4444' : '#22c55e'; // Tailwind red-500 vs green-500
 
       const recu = `
-                <!doctype html>
-                <html>
-                    <head>
-                        <title>Reçu de paiement</title>
-                        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-                        <style>
-                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; color: #333; }
-                            .recu-container { max-width: 650px; margin: 30px auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-                            .recu-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; }
-                            .recu-header h2 { margin: 0; font-size: 2.25rem; color: #1e40af; font-weight: 700; }
-                            .recu-header p { margin-top: 5px; font-size: 1rem; color: #64748b; }
-                            .recu-details { margin-bottom: 30px; }
-                            .recu-details table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
-                            .recu-details th, .recu-details td { padding: 12px 15px; text-align: left; vertical-align: top; }
-                            .recu-details th { background-color: #eff6ff; color: #1e40af; font-weight: 600; border-radius: 8px 0 0 8px; }
-                            .recu-details td { background-color: #f8fafc; border-radius: 0 8px 8px 0; }
-                            .recu-details tr:last-child th, .recu-details tr:last-child td { border-bottom: none; }
-                            .recu-total { margin-top: 20px; text-align: right; font-size: 1.125rem; font-weight: 600; color: #1e40af; }
-                            .recu-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
-                            .recu-footer p { margin: 0; font-size: 0.9rem; color: #718096; }
-                            .status-paid { color: #22c55e; font-weight: bold; }
-                            .status-remaining { color: #ef4444; font-weight: bold; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="recu-container">
-                            <div class="recu-header">
-                                <h2>REÇU DE PAIEMENT</h2>
-                                <p>C.S.P.P.UNILU</p>
-                            </div>
-                            <div class="recu-details">
-                                <table>
-                                    <tr>
-                                        <th>Nom de l'élève</th>
-                                        <td>${nom}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Classe</th>
-                                        <td>${classe}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Montant Payé</th>
-                                        <td>${montant} ${devise}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Motif de paiement</th>
-                                        <td>${motif}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Date de paiement</th>
-                                        <td>${date}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Statut</th>
-                                        <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <div class="recu-footer">
-                                <p>Merci pour votre paiement. Pour toute question, veuillez nous contacter.</p>
-                                <p class="text-xs mt-2">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
-                            </div>
+            <!doctype html>
+            <html>
+                <head>
+                    <title>Reçu de paiement</title>
+                    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; color: #333; }
+                        .recu-container { max-width: 650px; margin: 30px auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #fff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+                        .recu-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; }
+                        .recu-header h2 { margin: 0; font-size: 2.25rem; color: #1e40af; font-weight: 700; }
+                        .recu-header p { margin-top: 5px; font-size: 1rem; color: #64748b; }
+                        .recu-details { margin-bottom: 30px; }
+                        .recu-details table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+                        .recu-details th, .recu-details td { padding: 12px 15px; text-align: left; vertical-align: top; }
+                        .recu-details th { background-color: #eff6ff; color: #1e40af; font-weight: 600; border-radius: 8px 0 0 8px; }
+                        .recu-details td { background-color: #f8fafc; border-radius: 0 8px 8px 0; }
+                        .recu-details tr:last-child th, .recu-details tr:last-child td { border-bottom: none; }
+                        .recu-total { margin-top: 20px; text-align: right; font-size: 1.125rem; font-weight: 600; color: #1e40af; }
+                        .recu-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
+                        .recu-footer p { margin: 0; font-size: 0.9rem; color: #718096; }
+                        .status-paid { color: #22c55e; font-weight: bold; }
+                        .status-remaining { color: #ef4444; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <div class="recu-container">
+                        <div class="recu-header">
+                            <h2>REÇU DE PAIEMENT</h2>
+                            <p>C.S.P.P.UNILU</p>
                         </div>
-                    </body>
-                </html>
-            `;
+                        <div class="recu-details">
+                            <table>
+                                <tr>
+                                    <th>Nom de l'élève</th>
+                                    <td>${nom} ${postnom} ${prenom}</td>
+                                </tr>
+                                <tr>
+                                    <th>Classe</th>
+                                    <td>${classe}</td>
+                                </tr>
+                                <tr>
+                                    <th>Montant Payé</th>
+                                    <td>${montant} ${devise}</td>
+                                </tr>
+                                <tr>
+                                    <th>Motif de paiement</th>
+                                    <td>${motif}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date de paiement</th>
+                                    <td>${date}</td>
+                                </tr>
+                                <tr>
+                                    <th>Statut</th>
+                                    <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="recu-footer">
+                            <p>Merci pour votre paiement. Pour toute question, veuillez nous contacter.</p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        `;
       const printWindow = window.open('', '_blank', 'height=600,width=800');
       printWindow.document.write(recu);
       printWindow.document.close();
       printWindow.print();
     }
+  </script>
 
-    // --- Delete Modal Functions ---
+  <script>
+    // Récupère les éléments de la fenêtre modale et du formulaire
     const deleteModal = document.getElementById('deleteModal');
-    const modalDeleteId = document.getElementById('modalDeleteId');
+    const modalDeleteIdInput = document.getElementById('modalDeleteId');
+    const deleteForm = document.getElementById('deleteForm');
 
+    // Fonction pour afficher la fenêtre modale de suppression
     function showDeleteModal(id) {
-      modalDeleteId.value = id;
-      deleteModal.style.display = 'flex'; // Use flex to center the modal
+      modalDeleteIdInput.value = id;
+      deleteModal.style.display = 'flex';
     }
 
+    // Fonction pour masquer la fenêtre modale de suppression
     function hideDeleteModal() {
       deleteModal.style.display = 'none';
     }
 
-    // Close modal when clicking outside of it
-    window.onclick = function (event) {
-      if (event.target == deleteModal) {
-        hideDeleteModal();
-      }
-    }
+    // Gère la soumission du formulaire de suppression
+    deleteForm.addEventListener('submit', function (event) {
+      event.preventDefault(); // Empêche la soumission du formulaire par défaut
+      const paymentId = modalDeleteIdInput.value;
+
+      // Soumet le formulaire
+      this.submit();
+    });
   </script>
 
   </script>

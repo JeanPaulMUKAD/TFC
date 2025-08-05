@@ -64,7 +64,7 @@
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="Themesbrand" name="author" />
     <!-- App favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico">
+    <link rel="shortcut icon" href="assets/images/logo_pp.png">
 
     <!-- Layout config Js -->
     <script src="../js/layout.js"></script>
