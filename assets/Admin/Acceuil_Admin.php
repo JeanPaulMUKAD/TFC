@@ -1,31 +1,31 @@
 <?php
-require_once __DIR__ . '/../Controllers/AuthController.php';
-$auth = new AuthController();
+    require_once __DIR__ . '/../Controllers/AuthController.php';
+    $auth = new AuthController();
 
-// Initialisation de $_SESSION['username'] si elle n'est pas définie (pour éviter les erreurs en l'absence de session)
-if (!isset($_SESSION['username'])) {
-    $_SESSION['username'] = 'Admin'; // Valeur par défaut
-}
+    // Initialisation de $_SESSION['username'] si elle n'est pas définie (pour éviter les erreurs en l'absence de session)
+    if (!isset($_SESSION['username'])) {
+        $_SESSION['username'] = 'Admin'; // Valeur par défaut
+    }
 
-// Nombre d'utilisateurs inscrits ce mois
-$userCount = 0;
-// Utilisation de la locale fr_FR pour le formatage du mois
-$formatter = new IntlDateFormatter('fr_FR', IntlDateFormatter::LONG, IntlDateFormatter::NONE, 'Europe/Paris', IntlDateFormatter::GREGORIAN, 'LLLL yyyy');
-$mois = ucfirst($formatter->format(new DateTime()));
+    // Nombre d'utilisateurs inscrits ce mois
+    $userCount = 0;
+    // Utilisation de la locale fr_FR pour le formatage du mois
+    $formatter = new IntlDateFormatter('fr_FR', IntlDateFormatter::LONG, IntlDateFormatter::NONE, 'Europe/Paris', IntlDateFormatter::GREGORIAN, 'LLLL yyyy');
+    $mois = ucfirst($formatter->format(new DateTime()));
 
-$sql = "SELECT COUNT(*) as total FROM utilisateurs WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())";
-$result = $auth->conn->query($sql);
-if ($result && $row = $result->fetch_assoc()) {
-    $userCount = (int) $row['total'];
-}
+    $sql = "SELECT COUNT(*) as total FROM utilisateurs WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())";
+    $result = $auth->conn->query($sql);
+    if ($result && $row = $result->fetch_assoc()) {
+        $userCount = (int) $row['total'];
+    }
 
-// Nombre total de types de paiement configurés
-$paymentCount = 0;
-$sql2 = "SELECT COUNT(*) as total FROM payementtype";
-$result2 = $auth->conn->query($sql2);
-if ($result2 && $row2 = $result2->fetch_assoc()) {
-    $paymentCount = (int) $row2['total'];
-}
+    // Nombre total de types de paiement configurés
+    $paymentCount = 0;
+    $sql2 = "SELECT COUNT(*) as total FROM payementtype";
+    $result2 = $auth->conn->query($sql2);
+    if ($result2 && $row2 = $result2->fetch_assoc()) {
+        $paymentCount = (int) $row2['total'];
+    }
 ?>
 <!DOCTYPE html>
 <html lang="fr">

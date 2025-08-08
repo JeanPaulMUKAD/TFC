@@ -1,46 +1,104 @@
 <?php
 
+// Assurez-vous que le chemin vers AuthController est correct
 require_once '../Controllers/AuthController.php';
+
 $auth = new AuthController();
 $messageErreur = null;
 
+// Démarrez la session si elle n'est pas déjà démarrée
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 $loggedInParentName = $_SESSION['username'] ?? '';
 
-// --- Bloc UNIQUE pour toutes les requêtes POST (y compris AJAX) ---
+
+// --- NOUVEAU BLOC POUR LA GÉNÉRATION DE LA FACTURE ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'generate_invoice') {
+    ob_start();
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+
+    // Inclure la bibliothèque FPDF ici
+    require_once '../../fpdf.php';
+
+    $data = $_POST;
+    if (
+        !isset($data['paiement_id']) ||
+        !isset($data['matricule']) ||
+        !isset($data['nom_eleve']) ||
+        !isset($data['classe_eleve']) ||
+        !isset($data['montant_paye']) ||
+        !isset($data['motif_paiement']) ||
+        !isset($data['date_paiement'])
+    ) {
+        http_response_code(400);
+        exit('Erreur : Données de facture incomplètes.');
+    }
+
+    $paiement_id = $data['paiement_id'];
+    $matricule = $data['matricule'];
+    $nom_eleve = $data['nom_eleve'];
+    $postnom_eleve = $data['postnom_eleve'] ?? '';
+    $prenom_eleve = $data['prenom_eleve'] ?? '';
+    $classe_eleve = $data['classe_eleve'];
+    $montant_paye = $data['montant_paye'];
+    $motif_paiement = $data['motif_paiement'];
+    $date_paiement = $data['date_paiement'];
+
+    $pdf = new FPDF();
+    $pdf->AddPage();
+    $pdf->SetFont('Arial', 'B', 16);
+    $pdf->Cell(0, 10, mb_convert_encoding('Facture de paiement', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
+    $pdf->Ln(10);
+    $pdf->SetFont('Arial', '', 12);
+    $pdf->Cell(50, 10, mb_convert_encoding('ID Paiement:', 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($paiement_id, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding('Matricule:', 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($matricule, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding("Nom de l'élève:", 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding("{$nom_eleve} {$postnom_eleve} {$prenom_eleve}", 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding('Classe:', 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($classe_eleve, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding('Motif:', 'ISO-859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($motif_paiement, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding('Montant payé:', 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($montant_paye, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, mb_convert_encoding('Date de paiement:', 'ISO-8859-1', 'UTF-8'), 0, 0);
+    $pdf->Cell(0, 10, mb_convert_encoding($date_paiement, 'ISO-8859-1', 'UTF-8'), 0, 1);
+
+    ob_end_clean();
+    header('Content-Type: application/pdf');
+    $pdf->Output('I', "Facture_{$matricule}_{$paiement_id}.pdf");
+    exit;
+}
+// --- Bloc UNIQUE pour toutes les autres requêtes POST (y compris AJAX) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    $resultat = ['success' => false, 'message' => 'Action non traitée.']; // Valeur par défaut
+    $resultat = ['success' => false, 'message' => 'Action non traitée.'];
 
-    // Déterminez l'action demandée
     $action = $_POST['action'] ?? '';
 
     error_log("Requête POST reçue dans Acceuil_Parent.php. Action: " . $action);
     error_log("POST data: " . print_r($_POST, true));
 
-    // --- Cas de l'action 'get_paiements' (pour matricule, si toujours utilisée) ---
-    // (Conservez ce bloc si vous utilisez encore cette action, sinon, vous pouvez l'enlever)
     if ($action === 'get_paiements') {
         if (isset($_POST['matricule'])) {
             $matricule = htmlspecialchars(trim($_POST['matricule']));
-            // Assurez-vous que AuthController a bien une méthode obtenirPaiementsParMatricule si vous l'utilisez
             $resultat = $auth->obtenirPaiementsParMatricule($matricule);
             error_log("Résultat de obtenirPaiementsParMatricule: " . json_encode($resultat));
         } else {
             $resultat = ['success' => false, 'message' => 'Matricule manquant pour get_paiements.'];
             error_log("Erreur: Matricule manquant.");
         }
-    }
-    // --- Cas de l'action 'get_paiements_by_parent' (pour le parent connecté) ---
-    elseif ($action === 'get_paiements_by_parent') {
-        // C'EST LA LIGNE À MODIFIER ICI :
-        if (isset($_POST['parent_name'])) { // OK, la clé attendue est 'parent_name'
-            $parentNameFromAjax = htmlspecialchars(trim($_POST['parent_name'])); // <-- LISEZ BIEN 'parent_name' ici !
+    } elseif ($action === 'get_paiements_by_parent') {
+        if (isset($_POST['parent_name'])) {
+            $parentNameFromAjax = htmlspecialchars(trim($_POST['parent_name']));
 
             error_log("parentNameFromAjax (via POST): " . $parentNameFromAjax);
             error_log("loggedInParentName (via session): " . $loggedInParentName);
 
-            // Vérification de sécurité : le nom envoyé par JS doit correspondre au nom de la session
             if ($parentNameFromAjax !== $loggedInParentName || empty($loggedInParentName)) {
                 $resultat = ['success' => false, 'message' => 'Accès non autorisé ou parent non identifié.'];
                 error_log("Accès non autorisé ou non-concordance des noms de parent: " . json_encode($resultat));
@@ -50,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'get_enfants_et_statut_paiement') {
             if ($loggedInParentId !== null) {
-                // Appel de la nouvelle fonction dans AuthController en passant l'ID du parent
                 $resultat = $auth->obtenirEnfantsEtStatutPaiementParIdParent($loggedInParentId);
                 error_log("Résultat de obtenirEnfantsEtStatutPaiementParIdParent: " . json_encode($resultat));
             } else {
@@ -60,16 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $resultat = ['success' => false, 'message' => 'Clé "parent_name" manquante dans la requête POST.'];
             error_log("Erreur: Clé 'parent_name' manquante.");
+
         }
-    }
-    // --- Si l'action n'est pas reconnue ---
-    else {
+    } else {
         $resultat = ['success' => false, 'message' => 'Action POST non reconnue.'];
         error_log("Action POST non reconnue: " . json_encode($resultat));
     }
 
     echo json_encode($resultat);
-    exit; // Très important : arrête le script ici après avoir envoyé la réponse JSON
+    exit;
 }
 
 ?>
@@ -214,6 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full bg-white/10 text-white">
                     <span class="text-green-500">● </span>ESPACE DU PARENT
                 </div>
+                <h1 class="text-4xl">Bonjour <?php echo $_SESSION['username'] ?></h1>
 
                 <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
                     Bienvenue dans votre espace<br>
@@ -227,11 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </p>
 
                 <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-                    <a href="../Parent/PaiementParent.php"
-                        class="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-indigo-600 hover:to-blue-500 text-white font-semibold py-3 px-6 rounded-full text-sm flex items-center gap-2">
-                        <i class="fas fa-money-bill-wave text-white"></i>
-                        <span>Payer les frais</span>
-                    </a>
+
                     <a href="mailto:administrationcsppunilu@gmail.com"
                         class="bg-white text-black hover:bg-gray-200 transition font-semibold py-3 px-6 rounded-full flex items-center gap-2 text-sm">
                         <i class="fas fa-file-alt text-blue-600"></i>
@@ -303,6 +356,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Statut</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action</th>
 
                             </tr>
                         </thead>
@@ -319,7 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </section>
 
-        <section class="bg-gray-100 py-16 px-6">
+    <section class="bg-gray-100 py-16 px-6">
         <div class="max-w-7xl mx-auto">
             <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Statut de Paiement de Vos Enfants
             </h2>
@@ -356,12 +412,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Action</th>
+
                             </tr>
                         </thead>
                         <tbody id="enfantsTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="9"
-                                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                     Chargement des informations des enfants...</td>
                             </tr>
                         </tbody>
@@ -387,20 +443,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             async function fetchPaiementsForParent(parentName) {
                 if (!parentName) {
-                    paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
+                    paiementsTableBody.innerHTML = `<tr><td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
                     return;
                 }
 
-                paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Chargement de l'historique des paiements pour ${htmlspecialchars(parentName)}...</td></tr>`;
+                paiementsTableBody.innerHTML = `<tr><td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Chargement de l'historique des paiements pour ${htmlspecialchars(parentName)}...</td></tr>`;
 
                 try {
                     const response = await fetch(window.location.href, {
-                        method: 'POST', // Assurez-vous que la méthode est POST
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-Requested-With': 'XMLHttpRequest'
                         },
-                        // ICI : Utilisez 'parent_name' comme clé, pas 'nom_parent' car c'est ce que PHP attend maintenant
                         body: `action=get_paiements_by_parent&parent_name=${encodeURIComponent(parentName)}`
                     });
 
@@ -409,15 +464,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (data.success && data.paiements && data.paiements.length > 0) {
                         let rows = '';
                         data.paiements.forEach(paiement => {
-                            // Assurez-vous que les valeurs sont nettoyées si elles contiennent du texte (devise)
                             const montantPayeNumeric = parseFloat(String(paiement.montant_payer).replace(/[^0-9.,]/g, '').replace(',', '.'));
                             const totalAnnuelNumeric = parseFloat(String(paiement.total_annuel).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-
                             const montantRestant = totalAnnuelNumeric - montantPayeNumeric;
 
                             let statusClass = '';
                             let statusText = '';
-                            let paymentButton = ''; // Nouvelle variable pour le bouton
+                            let paymentButton = '';
+                            let factureButton = '';
+
+                            if (parseFloat(String(paiement.montant_payer).replace(/[^0-9.,]/g, '').replace(',', '.')) > 0) {
+                                factureButton = `<button class="download-facture-btn ml-2 px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700"
+                                data-paiement-id="${paiement.id_paiement}"
+                                data-matricule="${htmlspecialchars(paiement.matricule)}"
+                                data-nom-eleve="${htmlspecialchars(paiement.nom_eleve)}"
+                                data-postnom-eleve="${htmlspecialchars(paiement.postnom_eleve)}"
+                                data-prenom-eleve="${htmlspecialchars(paiement.prenom_eleve)}"
+                                data-classe-eleve="${htmlspecialchars(paiement.classe_eleve)}"
+                                data-montant-paye="${htmlspecialchars(paiement.montant_payer)}"
+                                data-motif-paiement="${htmlspecialchars(paiement.motif_paiement)}"
+                                data-date-paiement="${htmlspecialchars(paiement.date_paiement)}"
+                                >
+                                <i class="fas fa-file-invoice"></i> Télécharger
+                            </button>`;
+                            }
 
                             if (montantRestant <= 0) {
                                 statusClass = 'bg-green-100 text-green-800';
@@ -426,8 +496,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 statusClass = 'bg-red-100 text-red-800';
                                 statusText = `Reste : ${montantRestant.toLocaleString('fr-FR')}`;
 
-                                // Créer le bouton de paiement si un montant est dû
-                                // Nous allons passer toutes les infos nécessaires via l'URL
                                 const paymentUrl = `../Parent/PaiementParent.php?` +
                                     `matricule=${encodeURIComponent(paiement.matricule || '')}&` +
                                     `nom_eleve=${encodeURIComponent(paiement.nom_eleve || '')}&` +
@@ -437,48 +505,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     `classe_eleve=${encodeURIComponent(paiement.classe_eleve || '')}&` +
                                     `adresse_eleve=${encodeURIComponent(paiement.adresse_eleve || '')}&` +
                                     `motif_paiement=${encodeURIComponent(paiement.motif_paiement || '')}&` +
-                                    `nom_parent=${encodeURIComponent(loggedInParentName || '')}&` + // Utilisez le nom du parent connecté
-                                    `montant_du=${encodeURIComponent(montantRestant.toFixed(2))}`; // Montant restant dû
+                                    `nom_parent=${encodeURIComponent(loggedInParentName || '')}&` +
+                                    `montant_du=${encodeURIComponent(montantRestant.toFixed(2))}`;
 
                                 paymentButton = `<a href="${paymentUrl}" class="ml-2 px-3 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700">Payer le solde</a>`;
                             }
 
                             rows += `
-                                    <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.matricule)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.nom_eleve)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.postnom_eleve)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.prenom_eleve)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.sexe_eleve || 'N/A')}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.classe_eleve)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.adresse_eleve)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.montant_payer)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.motif_paiement)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.date_paiement)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                                                ${statusText}
-                                            </span>
-                                            ${paymentButton} </td>
-                                    </tr>
-                                    `;
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.matricule)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${htmlspecialchars(paiement.nom_eleve)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.postnom_eleve)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.prenom_eleve)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.sexe_eleve || 'N/A')}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.classe_eleve)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.adresse_eleve)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.montant_payer)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.motif_paiement)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${htmlspecialchars(paiement.date_paiement)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                        ${statusText}
+                                    </span>
+                                    ${paymentButton}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    ${factureButton}
+                                </td>
+                            </tr>
+                        `;
                         });
                         paiementsTableBody.innerHTML = rows;
+
+                        // Ajoutez les gestionnaires d'événements pour les boutons de téléchargement
+                        const downloadButtons = document.querySelectorAll('.download-facture-btn');
+                        downloadButtons.forEach(button => {
+                            button.addEventListener('click', function (event) {
+                                event.preventDefault(); // Empêche l'action par défaut
+                                const invoiceData = {
+                                    paiement_id: this.dataset.paiementId,
+                                    matricule: this.dataset.matricule,
+                                    nom_eleve: this.dataset.nomEleve,
+                                    postnom_eleve: this.dataset.postnomEleve,
+                                    prenom_eleve: this.dataset.prenomEleve,
+                                    classe_eleve: this.dataset.classeEleve,
+                                    montant_paye: this.dataset.montantPaye,
+                                    motif_paiement: this.dataset.motifPaiement,
+                                    date_paiement: this.dataset.datePaiement
+                                };
+                                generateInvoice(invoiceData);
+                            });
+                        });
+
                     } else {
-                        paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">${data.message || "Aucun historique de paiement trouvé pour les enfants de ce parent."}</td></tr>`;
+                        paiementsTableBody.innerHTML = `<tr><td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">${data.message || "Aucun historique de paiement trouvé pour les enfants de ce parent."}</td></tr>`;
                     }
                 } catch (error) {
                     console.error('Erreur lors de la récupération des paiements:', error);
-                    paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Une erreur est survenue lors du chargement de l'historique des paiements.</td></tr>`;
+                    paiementsTableBody.innerHTML = `<tr><td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Une erreur est survenue lors du chargement de l'historique des paiements.</td></tr>`;
                 }
             }
 
-            
+            // Fonction pour générer la facture (doit être définie)
+            async function generateInvoice(invoiceData) {
+                try {
+                    // Remplacez 'generate_invoice.php' par le chemin réel vers votre script PHP
+                    const response = await fetch('/generate_invoice.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(invoiceData)
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `Facture_${invoiceData.matricule}_${invoiceData.paiement_id}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    } else {
+                        alert('Erreur lors de la génération de la facture.');
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    alert('Une erreur est survenue lors de la génération de la facture.');
+                }
+            }
 
             if (loggedInParentName) {
                 fetchPaiementsForParent(loggedInParentName);
             } else {
-                paiementsTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
+                paiementsTableBody.innerHTML = `<tr><td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">Le nom du parent n'est pas disponible. Veuillez vous assurer d'être connecté.</td></tr>`;
             }
 
             function htmlspecialchars(str) {
@@ -494,7 +616,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     </script>
-
 
     <!-- SEARCH LOGO -->
     <script>
