@@ -1122,6 +1122,118 @@ class AuthController
         return ['success' => true, 'enfants' => $enfantsAvecStatut];
     }
 
+    /**
+     * Récupère tous les paiements de la base de données.
+     * @return array
+     */
+    public function obtenirTousLesPaiements()
+    {
+        try {
+            $sql = "SELECT * FROM paiement";
+            $result = $this->conn->query($sql);
+            if ($result === false) {
+                return ['success' => false, 'message' => "Erreur de base de données : " . $this->conn->error];
+            }
+            return ['success' => true, 'paiements' => $result->fetch_all(MYSQLI_ASSOC)];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "Erreur imprévue : " . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Récupère tous les élèves inscrits.
+     * @return array
+     */
+    public function obtenirTousLesEleves()
+    {
+        try {
+            $sql = "SELECT * FROM inscriptions";
+            $result = $this->conn->query($sql);
+            if ($result === false) {
+                return ['success' => false, 'message' => "Erreur de base de données : " . $this->conn->error];
+            }
+            return ['success' => true, 'eleves' => $result->fetch_all(MYSQLI_ASSOC)];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "Erreur imprévue : " . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Récupère les élèves qui ont des arriérés de paiement.
+     * Ceci est un exemple simple, car cela suppose que les élèves sans paiement sont en arriérés.
+     * Une logique plus complexe impliquerait de vérifier les montants payés par rapport aux montants dus.
+     * @return array
+     */
+    public function obtenirElevesAvecArrieres()
+    {
+        try {
+            $sql = "
+            SELECT 
+                e.matricule, 
+                e.nom_eleve, 
+                e.postnom_eleve, 
+                e.prenom_eleve, 
+                e.classe_selection,
+                e.nom_parent, 
+                e.adresse_eleve,
+                MAX(p.total_annuel) AS total_annuel,
+                COALESCE(SUM(p.montant_payer), 0) AS total_paye,
+                MAX(p.mode_paiement) AS dernier_mode_paiement,
+                (MAX(p.total_annuel) - COALESCE(SUM(p.montant_payer), 0)) AS arrieres
+            FROM 
+                inscriptions e
+            LEFT JOIN 
+                paiement p ON e.matricule = p.matricule
+            GROUP BY 
+                e.matricule, 
+                e.nom_eleve, 
+                e.postnom_eleve, 
+                e.prenom_eleve, 
+                e.classe_selection,
+                e.nom_parent, 
+                e.adresse_eleve
+            HAVING 
+                arrieres > 0;
+        ";
+
+            $result = $this->conn->query($sql);
+
+            if ($result === false) {
+                return ['success' => false, 'message' => "Erreur de base de données : " . $this->conn->error];
+            }
+
+            $eleves = $result->fetch_all(MYSQLI_ASSOC);
+
+            return ['success' => true, 'eleves' => $eleves];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "Erreur imprévue : " . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Récupère les élèves d'une classe spécifique.
+     * @param string $classe
+     * @return array
+     */
+    public function obtenirElevesParClasse($classe)
+    {
+        try {
+            $sql = "SELECT * FROM inscriptions WHERE classe_selection = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("s", $classe);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result === false) {
+                return ['success' => false, 'message' => "Erreur de base de données : " . $this->conn->error];
+            }
+            return ['success' => true, 'eleves' => $result->fetch_all(MYSQLI_ASSOC)];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => "Erreur imprévue : " . $e->getMessage()];
+        }
+    }
+
+
 
 
 

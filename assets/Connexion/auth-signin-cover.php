@@ -93,8 +93,8 @@
                                             <img src="assets/images/logo_pp2.png" alt="Logo" style="max-width: 90px; height: auto;">
                                         </div>
                                         <div>
-                                            <h5 class="text-primary text-center">Bienvenue !</h5>
-                                            <p class="text-muted">Connectez-vous pour continuer.</p>
+                                            <h5 class="text-primary text-center">Bienvenue sur platerfome du C.S.P.P.UNILU!</h5>
+                                            <p class="text-muted text-center">Connectez-vous pour continuer.</p>
                                         </div>
 
                                         <div class="mt-4">
