@@ -140,36 +140,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link rel="shortcut icon" href="/assets/images/logo_pp.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-
         body {
             font-family: 'Poppins', sans-serif;
         }
 
-        /* Styles supplémentaires pour la table */
-        .table-auto {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table-auto th,
-        .table-auto td {
-            border: 1px solid #e2e8f0;
-            padding: 12px;
-        }
-
-        .table-auto th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            color: #4a5568;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-        }
-
-        .table-auto td {
-            font-size: 0.875rem;
-            color: #4a5568;
+        .table-responsive {
+            overflow-x: auto;
         }
 
         .min-w-full {
@@ -199,48 +177,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .text-sm {
             font-size: 0.875rem;
         }
-
-        .text-red-500 {
-            color: #ef4444;
-        }
-
-        .text-green-500 {
-            color: #22c55e;
-        }
-
-        .text-yellow-600 {
-            color: #d97706;
-        }
-
-        .bg-blue-600 {
-            background-color: #2563eb;
-        }
-
-        .hover\:bg-blue-700:hover {
-            background-color: #1d4ed8;
-        }
-
-        .rounded-md {
-            border-radius: 0.375rem;
-        }
-
-        .px-3 {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-        }
-
-        .py-1 {
-            padding-top: 0.25rem;
-            padding-bottom: 0.25rem;
-        }
     </style>
-
-
 </head>
 
-<body class="bg-gray-50 text-black">
+<body class="bg-gray-100 text-black">
 
-    <!-- Navbar -->
     <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white shadow-md">
         <div class="text-2xl font-bold">
             <span class="text-black">C.S.P.P</span><span class="text-indigo-500 font-extrabold">.UNILU</span>
@@ -254,117 +195,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </nav>
 
-    <!-- Section Parent -->
-    <section class="relative px-4 py-10 bg-white pt-28">
-        <div
-            class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-black text-white min-h-[100vh] flex items-center justify-center shadow-2xl">
+    <div class="container mx-auto px-4 py-8 mt-20">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Tableau de bord du Parent</h1>
 
-            <!-- Dégradés -->
-            <div class="absolute top-0 left-0 w-64 h-64 bg-indigo-800 rounded-full opacity-20 blur-3xl"></div>
-            <div class="absolute top-0 right-0 w-64 h-64 bg-blue-700 rounded-full opacity-20 blur-3xl"></div>
-            <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-700 rounded-full opacity-20 blur-3xl"></div>
-            <div class="absolute bottom-0 right-0 w-64 h-64 bg-indigo-800 rounded-full opacity-20 blur-3xl"></div>
-
-            <!-- Contenu -->
-            <div class="relative z-10 max-w-4xl w-full text-center space-y-6 p-8">
-                <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full bg-white/10 text-white">
-                    <span class="text-green-500">● </span>ESPACE DU PARENT
-                </div>
-                <h1 class="text-4xl">Bonjour <?php echo $_SESSION['username'] ?></h1>
-
-                <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
-                    Bienvenue dans votre espace<br>
-                    <span
-                        class="inline-block bg-gradient-to-r from-blue-600 to-indigo-500 px-2 py-1 rounded-md text-white">Parent</span>
-                </h1>
-
-                <p class="text-lg text-gray-300 mt-2">
-                    Depuis cet espace, vous pouvez effectuer les paiements en ligne <br> et suivre en temps réel
-                    l’historique des frais de votre enfant.
-                </p>
-
-                <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-
-                    <a href="mailto:administrationcsppunilu@gmail.com"
-                        class="bg-white text-black hover:bg-gray-200 transition font-semibold py-3 px-6 rounded-full flex items-center gap-2 text-sm">
-                        <i class="fas fa-file-alt text-blue-600"></i>
-                        <span>Contacter la direction</span>
-                    </a>
-                </div>
-
-                <!-- Infos -->
-                <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-300">
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-check-circle text-indigo-400"></i>
-                        <span>Paiement sécurisé</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <button id="viewPaymentsBtn"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full mr-4">
+                        <i class="fas fa-history fa-lg"></i>
                     </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-clock text-indigo-400"></i>
-                        <span>Suivi en temps réel</span>
-                    </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-history text-indigo-400"></i>
-                        <span>Historique des transactions</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Historique des paiements</p>
+                        <p class="text-xl font-semibold text-gray-900">Tout afficher</p>
                     </div>
                 </div>
-            </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </button>
+
+            <button id="viewChildrenBtn"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full mr-4">
+                        <i class="fas fa-child fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Liste des enfants</p>
+                        <p class="text-xl font-semibold text-gray-900">Afficher tous</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </button>
+
+            <button id="contactAdminBtn"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-purple-100 text-purple-600 p-3 rounded-full mr-4">
+                         <i class="fas fa-headset fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Assistance</p>
+                        <p class="text-xl font-semibold text-gray-900">Contacter la direction</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </button>
         </div>
-    </section>
 
-    <!-- Section explicative -->
-    <section class="bg-gray-100 py-16 px-6">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Historique des Paiements de Votre Enfant
-            </h2>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 overflow-hidden">
-                <div class="table-responsive overflow-x-auto">
+        <div id="dashboardContent" class="bg-white p-6 rounded-xl shadow-lg min-h-[50vh]">
+            <div id="defaultMessage" class="text-center text-gray-500 py-10">
+                <i class="fas fa-info-circle fa-2x mb-4 text-gray-400"></i>
+                <p class="text-lg">Sélectionnez une option ci-dessus pour afficher les données.</p>
+            </div>
+            
+            <div id="paymentsTableContainer" style="display: none;">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Historique des Paiements de Votre Enfant</h2>
+                <div class="table-responsive">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Matricule</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Nom Enfant</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Post-Nom</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Prénom</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Sexe</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Classe</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Adresse</th>
-
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Montant Payé</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Motif</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Date Paiement</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Statut</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Action</th>
-
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom Enfant</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post-Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adresse</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Paiement</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
                         <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                <td colspan="12" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                     Chargement de l'historique des paiements...</td>
                             </tr>
                         </tbody>
@@ -372,69 +278,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-        </div>
-    </section>
-
-    <section class="bg-gray-100 py-16 px-6">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">Statut de Paiement de Vos Enfants
-            </h2>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 overflow-hidden">
-                <div class="table-responsive overflow-x-auto">
+            <div id="childrenTableContainer" style="display: none;">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Mes Enfants</h2>
+                <div class="table-responsive">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Matricule</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Nom Complet Enfant</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Sexe</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Classe</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Total Annuel Dû</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Montant Total Payé</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Solde Dû</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Statut</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Action</th>
-
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post-Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classe</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="enfantsTableBody" class="bg-white divide-y divide-gray-200">
+                        <tbody id="childrenTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                    Chargement des informations des enfants...</td>
+                                <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    Chargement de la liste des enfants...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-
-
+            
         </div>
-    </section>
+    </div>
 
-    <footer class="bg-gray-800 text-white py-6 text-center">
-        <p class="text-sm">
-            &copy;
-            <script>document.write(new Date().getFullYear())</script> C.S.P.P.UNILU. Tous droits réservés.
-        </p>
-    </footer>
+    <script>
+        // Fonction pour cacher tous les conteneurs et afficher le message par défaut
+        function showDefaultMessage() {
+            document.getElementById('defaultMessage').style.display = 'block';
+            document.getElementById('paymentsTableContainer').style.display = 'none';
+            document.getElementById('childrenTableContainer').style.display = 'none';
+        }
+
+        // Événement pour le bouton "Historique des paiements"
+        document.getElementById('viewPaymentsBtn').addEventListener('click', function () {
+            showDefaultMessage();
+            document.getElementById('paymentsTableContainer').style.display = 'block';
+            // Ici, vous devrez ajouter la logique pour charger les données de la table des paiements via une requête AJAX
+        });
+
+        // Événement pour le nouveau bouton "Liste des enfants"
+        document.getElementById('viewChildrenBtn').addEventListener('click', function () {
+            showDefaultMessage();
+            document.getElementById('childrenTableContainer').style.display = 'block';
+            // Ici, vous devrez ajouter la logique pour charger les données de la table des enfants via une requête AJAX
+        });
+
+        // Événement pour le bouton "Contacter la direction"
+        document.getElementById('contactAdminBtn').addEventListener('click', function () {
+            window.location.href = 'mailto:administrationcsppunilu@gmail.com';
+        });
+    </script>
+
+
+    
+
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {

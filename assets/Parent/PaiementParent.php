@@ -83,8 +83,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script>
         function checkout() {
-
-
             let matricule = document.getElementById("matricule").value.trim();
             let nomEleve = document.getElementById("nom_eleve").value.trim();
             let postnomEleve = document.getElementById("postnom_eleve").value.trim();
@@ -98,19 +96,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             let motif = document.getElementById("motif_paiement").value.trim();
             let errorDiv = document.getElementById("form-error-message");
             errorDiv.innerHTML = "";
-
-
-
             if (!matricule || !nomEleve || !postnomEleve || !prenomEleve || !sexeEleve || !classe || !nomParent || !adresseEleve || !montant || !devise || !motif || parseFloat(montant) <= 0) {
                 errorDiv.innerHTML = "Veuillez remplir tous les champs obligatoires correctement avant de confirmer le paiement.";
                 return;
             }
-
-
             let transactionId = Math.floor(Math.random() * 100000000).toString();
-
-
-
             CinetPay.setConfig({
                 apikey: '137270109768837fd94f8549.16939776',
                 site_id: '105903173',
