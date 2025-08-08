@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
       </a>
     </div>
 
-    <h1 class="text-4xl font-extrabold text-white text-center mb-8 drop-shadow-lg">HISTORIQUE DES PAIEMENTS</h1>
+    <h1 class="text-4xl font-extrabold text-white text-center mb-8 drop-shadow-lg">RAPPORT DES PAIEMENTS</h1>
 
     <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
       <div class="p-6">
@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devises
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Motif</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Mode</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Annuel</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
@@ -159,6 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                       <?php echo htmlspecialchars($row['motif_paiement']); ?>
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+                      <?php echo htmlspecialchars($row['mode_paiement']); ?>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
                       <?php echo htmlspecialchars($row['date_paiement']); ?>
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
@@ -178,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
                       <button
-                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['postnom_eleve']); ?>', '<?php echo addslashes($row['prenom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($row['devise']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
+                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['postnom_eleve']); ?>', '<?php echo addslashes($row['prenom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($row['devise']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['mode_paiement']); ?>','<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
                         class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 mb-1 lg:mb-0 lg:mr-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
                           stroke="currentColor">
@@ -187,15 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                         </svg>
                         Imprimer
                       </button>
-                      <button type="button" onclick="showDeleteModal(<?php echo $row['id']; ?>)"
-                        class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
-                          stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Supprimer
-                      </button>
+                      
                     </td>
                   </tr>
                 <?php endforeach; ?>
@@ -263,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
   </div>
 
   <script>
-    function imprimerRecu(nom, postnom, prenom, classe, montant, devise, motif, date, reste, deviseReste) {
+    function imprimerRecu(nom, postnom, prenom, classe, montant, devise, motif, mode, date, reste, deviseReste) {
       const statusText = parseFloat(reste) > 0 ? `Reste à payer: ${reste} ${deviseReste}` : 'Payé';
       const statusColor = parseFloat(reste) > 0 ? '#ef4444' : '#22c55e'; // Tailwind red-500 vs green-500
 
@@ -315,6 +311,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                                 <tr>
                                     <th>Motif de paiement</th>
                                     <td>${motif}</td>
+                                </tr>
+                                 <tr>
+                                    <th>Motif de paiement</th>
+                                    <td>${mode}</td>
                                 </tr>
                                 <tr>
                                     <th>Date de paiement</th>

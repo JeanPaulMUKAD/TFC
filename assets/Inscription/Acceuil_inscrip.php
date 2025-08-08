@@ -1,82 +1,190 @@
 <?php
+
 require_once '../Controllers/AuthController.php';
 $auth = new AuthController();
 $listeEleves = $auth->getToutesLesInscriptions();
-$inscriptions = $auth->getInscriptionsParClasse();
 $eleveData = null;
 $messageErreur = null;
 
-// --- GESTION DES REQUÊTES AJAX (Anciennement vos fichiers API) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['action'] === 'getEleve')) {
-    // Si la requête est AJAX et demande des données JSON
-    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-        header('Content-Type: application/json');
+$current_user_id = $_SESSION['user_id'] ?? null;
 
-        if (isset($_POST['action'])) {
-            $action = $_POST['action'];
-
-            switch ($action) {
-                case 'rechercherEleve':
-                    $matricule = htmlspecialchars(trim($_POST['matricule']));
-                    $resultat = $auth->rechercherEleveParMatricule($matricule);
-                    echo json_encode($resultat);
-                    exit;
-                case 'modifierEleve':
-                    $data = [
-                        'id' => isset($_POST['id']) ? (int) $_POST['id'] : 0,
-                        'nom_eleve' => isset($_POST['nom_eleve']) ? htmlspecialchars(trim($_POST['nom_eleve'])) : '',
-                        'postnom_eleve' => isset($_POST['postnom_eleve']) ? htmlspecialchars(trim($_POST['postnom_eleve'])) : '',
-                        'prenom_eleve' => isset($_POST['prenom_eleve']) ? htmlspecialchars(trim($_POST['prenom_eleve'])) : '',
-                        'sexe_eleve' => isset($_POST['sexe_eleve']) ? htmlspecialchars(trim($_POST['sexe_eleve'])) : '',
-                        'classe_selection' => isset($_POST['classe_selection']) ? htmlspecialchars(trim($_POST['classe_selection'])) : '',
-                        'nom_parent' => isset($_POST['nom_parent']) ? htmlspecialchars(trim($_POST['nom_parent'])) : '',
-                        'adresse_eleve' => isset($_POST['adresse_eleve']) ? htmlspecialchars(trim($_POST['adresse_eleve'])) : '',
-                        'annee_inscription' => isset($_POST['annee_inscription']) ? htmlspecialchars(trim($_POST['annee_inscription'])) : ''
-                    ];
-
-                    if ($data['id'] === 0) {
-                        echo json_encode(['success' => false, 'message' => 'ID d\'élève invalide pour la modification.']);
-                        exit;
-                    }
-
-                    $result = $auth->modifierEleves($data);
-                    if ($result) {
-                        echo json_encode(['success' => true, 'message' => 'Élève modifié avec succès.']);
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Erreur lors de la modification de l\'élève.']);
-                    }
-                    exit;
-                case 'supprimerEleve':
-                    $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-                    if ($id === 0) {
-                        echo json_encode(['success' => false, 'message' => 'ID d\'élève manquant pour la suppression.']);
-                        exit;
-                    }
-                    $result = $auth->supprimerEleve($id);
-                    if ($result) {
-                        echo json_encode(['success' => true, 'message' => 'Élève supprimé avec succès.']);
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Erreur lors de la suppression de l\'élève.']);
-                    }
-                    exit;
-            }
-        } elseif (isset($_GET['action']) && $_GET['action'] === 'getEleve' && isset($_GET['id'])) {
-            $id = (int) $_GET['id'];
-            $eleve = $auth->obtenirInfosEleveParId($id);
-
-            if ($eleve) {
-                echo json_encode(['success' => true, 'eleve' => $eleve]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Élève non trouvé.']);
-            }
-            exit;
+// Préparer les options des parents pour le select
+$parentsOptions = '';
+$conn = new mysqli("localhost", "root", "", "school");
+if (!$conn->connect_error) {
+    $sql = "SELECT id, Names_User FROM utilisateurs WHERE Role_User = 'parent'";
+    $result = $conn->query($sql);
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $parentsOptions .= '<option value="' . $row['id'] . '">' . htmlspecialchars($row['Names_User']) . '</option>';
         }
+    }
+    $conn->close();
+}
+
+// GESTION DE L'INSCRIPTION POST (classique ou AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['inscription_eleve'])) {
+    $nom_eleve = trim($_POST['nom_eleve'] ?? '');
+    $postnom_eleve = trim($_POST['postnom_eleve'] ?? '');
+    $prenom_eleve = trim($_POST['prenom_eleve'] ?? '');
+    $sexe_eleve = $_POST['sexe_eleve'] ?? '';
+    $classe_selection = $_POST['classe_selection'] ?? '';
+    $parent_id = $_POST['nom_parent'] ?? ''; // Ce champ contient l'ID du parent, pas son nom
+    $adresse_eleve = trim($_POST['adresse_eleve'] ?? '');
+    $annee_inscription = trim($_POST['annee_inscription'] ?? '');
+
+    if (
+        empty($nom_eleve) ||
+        empty($postnom_eleve) ||
+        empty($prenom_eleve) ||
+        empty($sexe_eleve) ||
+        empty($classe_selection) ||
+        empty($parent_id) ||      // Ici on vérifie l'ID du parent
+        empty($adresse_eleve) ||
+        empty($annee_inscription)
+    ) {
+        $result = ['success' => false, 'message' => "Tous les champs sont requis pour l'inscription."];
+    } else {
+        if ($current_user_id === null) {
+            $result = ['success' => false, 'message' => "Erreur : L'ID de l'utilisateur parent n'est pas disponible. Veuillez vous connecter."];
+        } else {
+            // Connexion pour récupérer le nom du parent à partir de son ID
+            $nom_parent = '';
+            $conn = new mysqli("localhost", "root", "", "school");
+            if (!$conn->connect_error) {
+                $stmt = $conn->prepare("SELECT Names_User FROM utilisateurs WHERE id = ?");
+                $stmt->bind_param("i", $parent_id);
+                $stmt->execute();
+                $stmt->bind_result($nom_parent_result);
+                if ($stmt->fetch()) {
+                    $nom_parent = $nom_parent_result;
+                }
+                $stmt->close();
+                $conn->close();
+            }
+
+            if (empty($nom_parent)) {
+                $result = ['success' => false, 'message' => "Le parent sélectionné est invalide."];
+            } else {
+                // Appel à la méthode pour enregistrer l'élève
+                $result = $auth->enregistrerEleve(
+                    $nom_eleve,
+                    $postnom_eleve,
+                    $prenom_eleve,
+                    $sexe_eleve,
+                    $classe_selection,
+                    $nom_parent,    // On enregistre ici le nom du parent (pas l'ID)
+                    $adresse_eleve,
+                    $annee_inscription,
+                    $parent_id      // Tu peux aussi stocker l'ID du parent en base si tu as ce champ parent_id
+                );
+            }
+        }
+    }
+
+    // Si requête AJAX, répondre JSON et sortir
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode($result);
+        exit;
+    } else {
+        // Sinon message HTML classique à afficher dans la page
+        $messageErreur = $result['success']
+            ? "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>"
+            : "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
     }
 }
 
+// --- GESTION DES REQUÊTES AJAX ---
+if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+    header('Content-Type: application/json');
+
+    $action = null;
+
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+    } elseif (isset($_GET['action'])) {
+        $action = $_GET['action'];
+    }
+
+    if ($action) {
+        switch ($action) {
+            case 'getStudents':
+                $classe = isset($_GET['classe']) ? htmlspecialchars(trim($_GET['classe'])) : null;
+                if ($classe) {
+                    $resultat = $auth->obtenirElevesParClasse($classe);
+                    if ($resultat['success']) {
+                        echo json_encode(['success' => true, 'inscriptions' => $resultat['eleves']]);
+                    } else {
+                        echo json_encode(['success' => false, 'message' => $resultat['message']]);
+                    }
+                } else {
+                    $inscriptions = $auth->getToutesLesInscriptions();
+                    echo json_encode(['success' => true, 'inscriptions' => $inscriptions]);
+                }
+                exit;
+
+            case 'getEleve':
+                $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+                if ($id > 0) {
+                    $eleve = $auth->obtenirInfosEleveParId($id);
+                    if ($eleve) {
+                        echo json_encode(['success' => true, 'eleve' => $eleve]);
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Élève non trouvé.']);
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'ID d\'élève invalide.']);
+                }
+                exit;
+
+            case 'modifierEleve':
+                $data = [
+                    'id' => isset($_POST['id']) ? (int) $_POST['id'] : 0,
+                    'nom_eleve' => isset($_POST['nom_eleve']) ? htmlspecialchars(trim($_POST['nom_eleve'])) : '',
+                    'postnom_eleve' => isset($_POST['postnom_eleve']) ? htmlspecialchars(trim($_POST['postnom_eleve'])) : '',
+                    'prenom_eleve' => isset($_POST['prenom_eleve']) ? htmlspecialchars(trim($_POST['prenom_eleve'])) : '',
+                    'sexe_eleve' => isset($_POST['sexe_eleve']) ? htmlspecialchars(trim($_POST['sexe_eleve'])) : '',
+                    'classe_selection' => isset($_POST['classe_selection']) ? htmlspecialchars(trim($_POST['classe_selection'])) : '',
+                    'nom_parent' => isset($_POST['nom_parent']) ? htmlspecialchars(trim($_POST['nom_parent'])) : '',
+                    'adresse_eleve' => isset($_POST['adresse_eleve']) ? htmlspecialchars(trim($_POST['adresse_eleve'])) : '',
+                    'annee_inscription' => isset($_POST['annee_inscription']) ? htmlspecialchars(trim($_POST['annee_inscription'])) : ''
+                ];
+
+                if ($data['id'] === 0) {
+                    echo json_encode(['success' => false, 'message' => 'ID d\'élève invalide pour la modification.']);
+                    exit;
+                }
+
+                $result = $auth->modifierEleves($data);
+                if ($result) {
+                    echo json_encode(['success' => true, 'message' => 'Élève modifié avec succès.']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Erreur lors de la modification de l\'élève.']);
+                }
+                exit;
+
+            case 'supprimerEleve':
+                $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+                if ($id === 0) {
+                    echo json_encode(['success' => false, 'message' => 'ID d\'élève manquant pour la suppression.']);
+                    exit;
+                }
+                $result = $auth->supprimerEleve($id);
+                if ($result) {
+                    echo json_encode(['success' => true, 'message' => 'Élève supprimé avec succès.']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Erreur lors de la suppression de l\'élève.']);
+                }
+                exit;
+
+            default:
+                echo json_encode(['success' => false, 'message' => 'Action non supportée.']);
+                exit;
+        }
+    }
+}
 ?>
-
-
 
 
 <!DOCTYPE html>
@@ -87,471 +195,607 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secrétariat | C.S.P.P.UNILU</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome (version stable gratuite sans compte) -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-     <!-- App favicon -->
     <link rel="shortcut icon" href="/assets/images/logo_pp.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-
         body {
             font-family: 'Poppins', sans-serif;
         }
     </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-black text-white">
+<body class="bg-gray-100 text-black">
 
-    <!-- Navbar -->
-    <nav
-        class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white text-black shadow-md">
+    <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white shadow-md">
         <div class="text-2xl font-bold">
             <span class="text-black">C.S.P.P</span><span class="text-orange-500 font-extrabold">.UNILU</span>
         </div>
-
         <div class="flex items-center space-x-4">
             <a href="mailto:administrationcsppunilu@gmail.com" target="_blank" class="text-sm font-medium">Aide</a>
             <a href="/logoutParent"
-                class="bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white font-semibold py-2 px-4 rounded-full text-sm">
+                class="bg-gradient-to-r from-red-600 to-orange-500 hover:from-orange-600 hover:to-red-500 transition text-white font-semibold py-2 px-4 rounded-full text-sm">
                 Se déconnecter
             </a>
         </div>
     </nav>
 
+    <div class="container mx-auto px-4 py-8 mt-20">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Tableau de bord du Secrétaire</h1>
 
-    <section class="relative px-4 py-10 bg-white pt-28">
-        <div
-            class="relative mx-auto max-w-14xl rounded-3xl overflow-hidden bg-black text-white min-h-[100vh] flex items-center justify-center shadow-2xl">
-            <!-- Dégradés discrets dans les coins -->
-            <div
-                class="absolute top-0 left-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
-            </div>
-            <div
-                class="absolute top-0 right-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
-            </div>
-            <div
-                class="absolute bottom-0 left-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
-            </div>
-            <div
-                class="absolute bottom-0 right-0 w-64 h-64 bg-red-800 rounded-full opacity-20 blur-3xl pointer-events-none">
-            </div>
-
-            <!-- Contenu centré -->
-            <div class="relative z-10 max-w-4xl w-full text-center space-y-6 p-8">
-                <div class="inline-block text-xs px-4 py-1 border border-white/20 rounded-full text-white bg-white/10">
-                    <span class="text-green-700">● </span>ESPACE DU SECRÉTAIRE SCOLAIRE
-                </div>
-                <h1 class="text-4xl">Bonjour <?php echo $_SESSION['username']?></h1>
-                <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
-                    Bienvenue sur votre <br>
-                    <span
-                        class="inline-block bg-gradient-to-r from-red-600 to-orange-500 px-2 py-1 rounded-md text-white">page</span>
-                </h1>
-
-                <p class="text-lg text-gray-300 mt-2">
-                    Vous êtes chargé de la gestion administrative des élèves et du suivi des inscriptions. <br>
-                    Votre rôle est essentiel dans le bon fonctionnement de l’établissement.
-                </p>
-
-                <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-                    <a href="../Inscription/inscription.php"
-                        class="bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white font-semibold py-3 px-6 rounded-full text-sm flex items-center gap-2">
-                        <i class="fas fa-user-pen text-white"></i>
-                        <span>Inscrire un élève</span>
-                    </a>
-                    <a href="mailto:administrationcsppunilu@gmail.com"
-                        class="bg-white text-black hover:bg-gray-200 transition font-semibold py-3 px-6 rounded-full flex items-center gap-2 text-sm">
-                        <i class="fas fa-phone text-red-500"></i>
-                        <span>Contacter la direction</span>
-                    </a>
-                </div>
-
-                <!-- Infos du bas -->
-                <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-300">
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-folder text-orange-400"></i>
-                        <span>Gestion des dossiers</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <button id="showInscriptionFormBtn"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between w-full text-left">
+                <div class="flex items-center">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full mr-4">
+                        <i class="fas fa-user-plus fa-lg"></i>
                     </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-user-pen text-orange-400"></i>
-                        <span>Inscriptions des élèves</span>
-                    </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <i class="fas fa-lock text-orange-400"></i>
-                        <span>Sécurité des données</span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Action principale</p>
+                        <p class="text-2xl font-semibold text-gray-900">Inscrire un élève</p>
                     </div>
                 </div>
-            </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </button>
+
+
+            <button id="viewAllStudentsBtn"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-green-100 text-green-600 p-3 rounded-full mr-4">
+                        <i class="fas fa-users fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Liste des élèves</p>
+                        <p class="text-2xl font-semibold text-gray-900">Tout afficher</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </button>
+
+            <a href="mailto:administrationcsppunilu@gmail.com"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-yellow-100 text-yellow-600 p-3 rounded-full mr-4">
+                        <i class="fas fa-headset fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Contact</p>
+                        <p class="text-2xl font-semibold text-gray-900">Direction</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </a>
+
+            <form id="filterByClassForm"
+                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col justify-center">
+                <label for="studentClass" class="text-sm font-medium text-gray-500 mb-2">Filtrer par classe</label>
+                <div class="flex items-center">
+                    <select id="studentClass" name="classe" required
+                        class="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">Sélectionnez une classe</option>
+                        <option value="7e EB">7e EB</option>
+                        <option value="8e EB">8e EB</option>
+                        <option value="1ere SC">1ère SC</option>
+                        <option value="1ere CG">1ère CG</option>
+                        <option value="1ere HP">1ère HP</option>
+                        <option value="1ere MG">1ère MG</option>
+                        <option value="1ere ELECT">1ère ELECT</option>
+                        <option value="2ere SC">2ère SC</option>
+                        <option value="2ere CG">2ère CG</option>
+                        <option value="2ere HP">2ère HP</option>
+                        <option value="2ere MG">2ère MG</option>
+                        <option value="2ere ELECT">2ère ELECT</option>
+                        <option value="2eme TCC">2ème TCC</option>
+                        <option value="3ere SC">3ère SC</option>
+                        <option value="3ere CG">3ère CG</option>
+                        <option value="3ere HP">3ère HP</option>
+                        <option value="3ere MG">3ère MG</option>
+                        <option value="3ere ELECT">3ère ELECT</option>
+                        <option value="3eme TCC">3ème TCC</option>
+                        <option value="4ere SC">4ère SC</option>
+                        <option value="4ere CG">4ère CG</option>
+                        <option value="4ere HP">4ère HP</option>
+                        <option value="4ere MG">4ère MG</option>
+                        <option value="4ere ELECT">4ère ELECT</option>
+                        <option value="4eme TCC">4ème TCC</option>
+                    </select>
+                    <button type="submit"
+                        class="ml-2 bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 transition-colors duration-200">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
+            </form>
         </div>
-    </section>
+    </div>
 
-
-
-
-    <section class="bg-gray-50 py-20 px-6 text-black">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">
-                Liste de tous les élèves inscrits
+    <div id="contentContainer" class="container mx-auto px-4 py-8">
+        <div id="inscriptionsSection" class="bg-white p-6 rounded-xl shadow-lg min-h-[50vh]">
+            <h2 class="text-2xl font-bold text-gray-400 mb-4 flex items-center">
+                <i class="fas fa-user-circle fa-lg mr-3 text-gray-400"></i>
+                Liste des élèves
             </h2>
 
-            <p class="text-gray-600 text-lg text-center mb-6">
-                Voici tous les élèves inscrits cette année, vous pouvez filtrer par classe.
-            </p>
-
-            <div class="mb-8 max-w-md mx-auto">
-                <input type="text" id="searchClasse" placeholder="Filtrer par classe..."
-                    class="w-full border border-gray-300 rounded-lg px-4 py-2" onkeyup="filterClasses()">
+            <div id="defaultMessage" class="text-center text-gray-500 py-10">
+                <i class="fas fa-info-circle fa-2x mb-4 text-gray-400"></i>
+                <p class="text-lg">Sélectionnez une option ci-dessus pour afficher les données.</p>
             </div>
 
-            <div id="inscriptionsContainer">
-                <?php
-                if (!empty($inscriptions)) {
-                    $currentClasse = null;
-                    $index = 1;
-                    foreach ($inscriptions as $eleve) {
-                        if ($eleve['classe_selection'] !== $currentClasse) {
-                            if ($currentClasse !== null) {
-                                // Ferme le tableau précédent et le div de groupe de classe
-                                echo "</tbody></table></div></div>";
-                            }
-                            $currentClasse = $eleve['classe_selection'];
-                            $index = 1; // Réinitialise l'index pour la nouvelle classe
-                            echo '<div class="classe-group mb-12" data-classe="' . htmlspecialchars($currentClasse) . '">';
-                            echo "<h3 class='text-2xl font-semibold mb-4 text-gray-800'>Classe : " . htmlspecialchars($currentClasse) . "</h3>"; // Couleur de texte pour les titres de classe
-                            echo '<div class="overflow-x-auto bg-white rounded-xl shadow-lg">';
-                            echo '<table class="min-w-full text-sm border border-gray-200 rounded-lg">'; // Supprime text-left de la table entière pour contrôler par colonne
-                            echo '<thead class="bg-gray-100 text-gray-700">'; // Supprime text-center ici
-                            echo '<tr>';
-                            echo '<th class="px-4 py-3 text-center w-12">#</th>'; // Centre, avec largeur fixe min.
-                            echo '<th class="px-4 py-3 text-left">Matricule</th>'; // Alignement à gauche pour la lisibilité
-                            echo '<th class="px-4 py-3 text-left">Nom complet</th>'; // Alignement à gauche
-                            echo '<th class="px-4 py-3 text-center">Sexe</th>'; // Centré
-                            echo '<th class="px-4 py-3 text-left">Classe</th>'; // Alignement à gauche
-                            echo '<th class="px-4 py-3 text-left">Parent</th>'; // Alignement à gauche
-                            echo '<th class="px-4 py-3 text-left">Adresse</th>'; // Alignement à gauche
-                            echo '<th class="px-4 py-3 text-center">Année</th>'; // Centré
-                            echo '<th class="px-4 py-3 text-center w-36">Action</th>'; // Centré, avec largeur fixe min.
-                            echo '</tr></thead><tbody class="bg-white text-gray-800">'; // Supprime text-center ici
-                        }
+            <div id="resultsContainer"></div>
 
-                        $nomComplet = htmlspecialchars($eleve['nom_eleve'] . ' ' . $eleve['postnom_eleve'] . ' ' . $eleve['prenom_eleve']);
-                        $matricule = htmlspecialchars($eleve['matricule']);
-                        $id = (int) $eleve['id'];
-                        echo '<tr class="border-t hover:bg-gray-50">';
-                        echo '<td class="px-4 py-2 text-center">' . $index++ . '</td>'; // Centré
-                        echo '<td class="px-4 py-2 text-left">' . $matricule . '</td>'; // Gauche
-                        echo '<td class="px-4 py-2 text-left">' . $nomComplet . '</td>'; // Gauche
-                        echo '<td class="px-4 py-2 text-center">' . htmlspecialchars($eleve['sexe_eleve']) . '</td>'; // Centré
-                        echo '<td class="px-4 py-2 text-left">' . htmlspecialchars($eleve['classe_selection']) . '</td>'; // Gauche
-                        echo '<td class="px-4 py-2 text-left">' . htmlspecialchars($eleve['nom_parent']) . '</td>'; // Gauche
-                        echo '<td class="px-4 py-2 text-left">' . htmlspecialchars($eleve['adresse_eleve']) . '</td>'; // Gauche
-                        echo '<td class="px-4 py-2 text-center">' . htmlspecialchars($eleve['annee_inscription']) . '</td>'; // Centré
-                
-                        // Boutons Modifier / Supprimer
-                        echo '<td class="px-4 py-2 flex items-center justify-center space-x-2">'; // Utilise flex et justify-center pour aligner les boutons
-                        echo '<button onclick="openModifierModal(' . $id . ')" class="bg-yellow-600 text-white text-xs px-4 py-1 rounded hover:bg-yellow-700 transition" title="Modifier">Modifier</button>'; // Taille de texte plus petite
-                        echo '<button onclick="openSupprimerModal(' . $id . ', \'' . $matricule . '\')" class="bg-red-600 text-white text-xs px-4 py-1 rounded hover:bg-red-700 transition" title="Supprimer">Supprimer</button>'; // Taille de texte plus petite
-                        echo '</td>';
-
-                        echo '</tr>';
-                    }
-                    // Ferme le dernier tableau et le div de groupe après la boucle
-                    echo "</tbody></table></div></div>";
-                } else {
-                    echo '<p class="text-center text-red-500 font-semibold">Aucun élève inscrit pour l’instant.</p>';
-                }
-                ?>
-            </div>
         </div>
-    </section>
-
-    
-
-    <div id="modalModifier" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white text-black">
-            <h3 class="text-lg font-bold mb-4">Modifier l'élève</h3>
-            <form id="modifierForm" onsubmit="submitModifier(event)">
-                <input type="hidden" id="modId" name="id">
-                <div class="mt-4">
-                    <label for="modNom" class="block text-sm font-medium text-gray-700">Nom:</label>
-                    <input type="text" id="modNom" name="nom_eleve"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modPostnom" class="block text-sm font-medium text-gray-700">Postnom:</label>
-                    <input type="text" id="modPostnom" name="postnom_eleve"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modPrenom" class="block text-sm font-medium text-gray-700">Prénom:</label>
-                    <input type="text" id="modPrenom" name="prenom_eleve"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modSexe" class="block text-sm font-medium text-gray-700">Sexe:</label>
-                    <select id="modSexe" name="sexe_eleve"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        <option value="M">Masculin</option>
-                        <option value="F">Féminin</option>
-                    </select>
-                </div>
-                <div class="mt-4">
-                    <label for="modClasse" class="block text-sm font-medium text-gray-700">Classe:</label>
-                    <input type="text" id="modClasse" name="classe_selection"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modParent" class="block text-sm font-medium text-gray-700">Nom Parent:</label>
-                    <input type="text" id="modParent" name="nom_parent"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modAdresse" class="block text-sm font-medium text-gray-700">Adresse:</label>
-                    <input type="text" id="modAdresse" name="adresse_eleve"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="mt-4">
-                    <label for="modAnnee" class="block text-sm font-medium text-gray-700">Année:</label>
-                    <input type="text" id="modAnnee" name="annee_inscription"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button type="submit"
-                        class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 hover:bg-orange-600 transition text-white text-base font-medium rounded-md w-full shadow-sm ">
-                        Enregistrer
-                    </button>
-                    <button type="button" onclick="closeModifierModal()"
-                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm transition hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
-                        Annuler
-                    </button>
-                </div>
-            </form>
+    </div>
+    <!-- Modale de confirmation suppression -->
+    <div id="confirmationModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h2 class="text-xl font-semibold mb-4 text-red-600 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Confirmation de suppression
+            </h2>
+            <p class="mb-6 text-gray-700">Voulez-vous vraiment supprimer cet élève ? <br> <span
+                    class="font-semibold text-red-600">Cette action est irréversible.</span></p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancelBtn"
+                    class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold">Annuler</button>
+                <button id="confirmBtn"
+                    class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white font-semibold">Supprimer</button>
+            </div>
         </div>
     </div>
 
-    <div id="modalSupprimer" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white text-black">
-            <h3 class="text-lg font-bold mb-4">Confirmer la suppression</h3>
-            <p id="supprimerMessage" class="py-4 text-center text-gray-700">Voulez-vous vraiment supprimer cet élève ?
-            </p>
-            <form id="supprimerForm" onsubmit="submitSupprimer(event)">
-                <input type="hidden" id="supId" name="id">
-                <div class="items-center px-4 py-3">
-                    <button type="submit"
-                        class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">
-                        Supprimer
-                    </button>
-                    <button type="button" onclick="closeSupprimerModal()"
-                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
-                        Annuler
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
     <script>
-        // JavaScript for Matricule Search (unchanged in its logic, but will now hit the same file)
-        async function fetchEleveByMatricule(e) {
-            e.preventDefault();
-            const matricule = document.getElementById('matriculeSearchInput').value;
-            const resultContainer = document.getElementById('searchResultContainer');
+        $(document).ready(function () {
+            let eleveEnModification = null;
 
-            resultContainer.innerHTML = "<p class='text-gray-500 text-center'>Recherche en cours...</p>";
+            // Charger tous les élèves quand on clique sur le bouton
+            $("#viewAllStudentsBtn").on("click", function () {
+                chargerEleves();
+            });
 
-            try {
-                const formData = new FormData();
-                formData.append('action', 'rechercherEleve'); // Ajoutez une action pour la gestion PHP
-                formData.append('matricule', matricule);
-
-                const response = await fetch(window.location.href, { // Toujours POST vers la même page
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    const eleve = data.eleve;
-                    resultContainer.innerHTML = `
-                        <div class="overflow-x-auto mt-4">
-                            <table class="min-w-full text-sm text-left border border-gray-200 rounded-lg">
-                                <thead class="bg-gray-100 text-gray-700">
-                                    <tr>
-                                        <th class="px-4 py-2">Matricule</th>
-                                        <th class="px-4 py-2">Nom</th>
-                                        <th class="px-4 py-2">Postnom</th>
-                                        <th class="px-4 py-2">Prénom</th>
-                                        <th class="px-4 py-2">Sexe</th>
-                                        <th class="px-4 py-2">Classe</th>
-                                        <th class="px-4 py-2">Nom Parent</th>
-                                        <th class="px-4 py-2">Adresse</th>
-                                        <th class="px-4 py-2">Année</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white text-black">
-                                    <tr class="border-t">
-                                        <td class="px-4 py-2">${eleve.matricule}</td>
-                                        <td class="px-4 py-2">${eleve.nom_eleve}</td>
-                                        <td class="px-4 py-2">${eleve.postnom_eleve}</td>
-                                        <td class="px-4 py-2">${eleve.prenom_eleve}</td>
-                                        <td class="px-4 py-2">${eleve.sexe_eleve}</td>
-                                        <td class="px-4 py-2">${eleve.classe_selection}</td>
-                                        <td class="px-4 py-2">${eleve.nom_parent}</td>
-                                        <td class="px-4 py-2">${eleve.adresse_eleve}</td>
-                                        <td class="px-4 py-2">${eleve.annee_inscription}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                } else {
-                    resultContainer.innerHTML = `<p class="text-red-500 font-semibold text-center">${data.message}</p>`;
+            // Charger élèves filtrés par classe
+            $("#filterByClassForm").on("submit", function (e) {
+                e.preventDefault();
+                let classe = $("#studentClass").val();
+                if (!classe) {
+                    toastr.warning("Veuillez sélectionner une classe.");
+                    return;
                 }
+                chargerEleves(classe);
+            });
 
-            } catch (error) {
-                resultContainer.innerHTML = `<p class="text-red-500 font-semibold text-center">Erreur lors de la requête: ${error.message}</p>`;
-                console.error('Fetch error:', error); // Log l'erreur complète dans la console
+            // Fonction pour charger les élèves, avec filtre optionnel
+            function chargerEleves(classe = null) {
+                $.ajax({
+                    url: window.location.href,
+                    method: "GET",
+                    data: { action: "getStudents", classe: classe },
+                    dataType: "json",
+                    success: function (response) {
+                        if (response.success) {
+                            afficherTableau(response.inscriptions);
+                        } else {
+                            toastr.error(response.message || "Erreur lors du chargement des élèves.");
+                        }
+                    },
+                    error: function () {
+                        toastr.error("Une erreur est survenue.");
+                    }
+                });
             }
 
-            return false; // Prevent default form submission
-        }
-
-        // JavaScript for Class Filter (for the second section)
-        function filterClasses() {
-            const input = document.getElementById('searchClasse');
-            const filter = input.value.toLowerCase();
-            const groupes = document.querySelectorAll('#inscriptionsContainer .classe-group');
-
-            groupes.forEach(groupe => {
-                const classe = groupe.getAttribute('data-classe').toLowerCase();
-                groupe.style.display = classe.includes(filter) ? '' : 'none';
-            });
-        }
-
-        // JavaScript for Modals (Modifier / Supprimer) - MODIFIED to hit the same file
-        let currentEditId = null;
-        let currentDeleteId = null;
-        let currentDeleteMatricule = null;
-
-        function openModifierModal(id) {
-            currentEditId = id;
-            // Requête GET vers le même fichier, avec un paramètre 'action'
-            fetch(`${window.location.href}?action=getEleve&id=${id}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
+            // Fonction d'affichage du tableau avec colonne action
+            function afficherTableau(eleves) {
+                if (!eleves || eleves.length === 0) {
+                    $("#resultsContainer").html("<p class='text-center text-gray-500 py-6'>Aucun élève trouvé.</p>");
+                    $("#defaultMessage").hide();
+                    $("#formModifContainer").remove();
+                    return;
                 }
-            })
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        const e = data.eleve;
-                        document.getElementById('modId').value = e.id;
-                        document.getElementById('modNom').value = e.nom_eleve;
-                        document.getElementById('modPostnom').value = e.postnom_eleve;
-                        document.getElementById('modPrenom').value = e.prenom_eleve;
-                        document.getElementById('modSexe').value = e.sexe_eleve;
-                        document.getElementById('modClasse').value = e.classe_selection;
-                        document.getElementById('modParent').value = e.nom_parent;
-                        document.getElementById('modAdresse').value = e.adresse_eleve;
-                        document.getElementById('modAnnee').value = e.annee_inscription;
-                        document.getElementById('modalModifier').classList.remove('hidden');
-                    } else {
-                        alert("Erreur chargement élève : " + data.message);
-                        console.error("Erreur PHP (getEleve) :", data.message);
-                    }
-                })
-                .catch(err => {
-                    alert("Erreur réseau ou JSON : " + err.message);
-                    console.error('Fetch error (openModifierModal):', err); // Log l'erreur complète dans la console
+
+                let html = `
+            <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-300 rounded-lg overflow-hidden">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 border">#</th>
+                        <th class="px-4 py-2 border">Nom</th>
+                        <th class="px-4 py-2 border">Postnom</th>
+                        <th class="px-4 py-2 border">Prénom</th>
+                        <th class="px-4 py-2 border">Sexe</th>
+                        <th class="px-4 py-2 border">Classe</th>
+                        <th class="px-4 py-2 border">Parent</th>
+                        <th class="px-4 py-2 border">Adresse</th>
+                        <th class="px-4 py-2 border">Année</th>
+                        <th class="px-4 py-2 border">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+                eleves.forEach((eleve, index) => {
+                    html += `
+                <tr class="hover:bg-gray-50" data-id="${eleve.id}">
+                    <td class="px-4 py-2 border">${index + 1}</td>
+                    <td class="px-4 py-2 border">${eleve.nom_eleve || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.postnom_eleve || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.prenom_eleve || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.sexe_eleve || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.classe_selection || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.nom_parent || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.adresse_eleve || ''}</td>
+                    <td class="px-4 py-2 border">${eleve.annee_inscription || ''}</td>
+                    <td class="px-4 py-2 border text-center space-x-2">
+                        <button class="modifierEleveBtn text-blue-600 hover:text-blue-800" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="supprimerEleveBtn text-red-600 hover:text-red-800" title="Supprimer">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
                 });
-        }
 
-        function closeModifierModal() {
-            document.getElementById('modalModifier').classList.add('hidden');
-        }
+                html += `</tbody></table></div>`;
 
-        function submitModifier(e) {
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            formData.append('action', 'modifierEleve'); // Ajoutez une action pour la gestion PHP
+                $("#resultsContainer").html(html);
+                $("#defaultMessage").hide();
 
-            fetch(window.location.href, { // POST vers la même page
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
-                },
-                body: formData
-            })
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    alert(data.message);
-                    if (data.success) {
-                        location.reload(); // Reload page to reflect changes
-                    }
-                })
-                .catch(err => {
-                    alert('Erreur réseau ou JSON: ' + err.message);
-                    console.error('Fetch error (submitModifier):', err); // Log l'erreur complète dans la console
+                // Retirer formulaire modif s'il existe
+                $("#formModifContainer").remove();
+
+                // Attacher événements pour boutons Modifier et Supprimer
+                $(".modifierEleveBtn").on("click", function () {
+                    const tr = $(this).closest("tr");
+                    const id = tr.data("id");
+                    ouvrirFormulaireModification(id);
                 });
-        }
 
-        function openSupprimerModal(id, matricule) {
-            currentDeleteId = id;
-            currentDeleteMatricule = matricule;
-            document.getElementById('supId').value = id;
-            document.getElementById('supprimerMessage').textContent = `Voulez-vous vraiment supprimer l'élève avec le matricule ${matricule} ?`;
-            document.getElementById('modalSupprimer').classList.remove('hidden');
-        }
-
-        function closeSupprimerModal() {
-            document.getElementById('modalSupprimer').classList.add('hidden');
-        }
-
-        function submitSupprimer(e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            formData.append('action', 'supprimerEleve'); // Ajoutez une action pour la gestion PHP
-
-            fetch(window.location.href, { // POST vers la même page
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
-                },
-                body: formData
-            })
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    alert(data.message);
-                    if (data.success) {
-                        location.reload(); // Reload page to reflect changes
-                    }
-                })
-                .catch(err => {
-                    alert('Erreur réseau ou JSON: ' + err.message);
-                    console.error('Fetch error (submitSupprimer):', err); // Log l'erreur complète dans la console
+                $(".supprimerEleveBtn").on("click", function () {
+                    const tr = $(this).closest("tr");
+                    const id = tr.data("id");
+                    confirmerSuppression(id);
                 });
-        }
+            }
+
+            // Ouvre le formulaire modif avec les données de l'élève
+            function ouvrirFormulaireModification(id) {
+                $.ajax({
+                    url: window.location.href,
+                    method: "GET",
+                    data: { action: "getEleve", id: id },
+                    dataType: "json",
+                    success: function (response) {
+                        if (response.success) {
+                            eleveEnModification = response.eleve;
+                            afficherFormulaireModification(response.eleve);
+                            $('html, body').animate({ scrollTop: $("#formModifContainer").offset().top }, 600);
+                        } else {
+                            toastr.error(response.message || "Impossible de récupérer les données de l'élève.");
+                        }
+                    },
+                    error: function () {
+                        toastr.error("Erreur lors de la récupération des données.");
+                    }
+                });
+            }
+
+            // Affiche le formulaire de modification sous le tableau
+            function afficherFormulaireModification(eleve) {
+                $("#formModifContainer").remove();
+
+                let formHtml = `
+            <div id="formModifContainer" class="bg-white p-6 rounded-xl shadow-lg mt-6 max-w-4xl mx-auto">
+                <h3 class="text-xl font-semibold mb-4">Modifier l'élève : ${eleve.nom_eleve} ${eleve.postnom_eleve}</h3>
+                <form id="formModifierEleve" class="space-y-4">
+                    <input type="hidden" name="id" value="${eleve.id}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-medium mb-1" for="nom_eleve">Nom</label>
+                            <input id="nom_eleve" name="nom_eleve" type="text" value="${eleve.nom_eleve || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="postnom_eleve">Postnom</label>
+                            <input id="postnom_eleve" name="postnom_eleve" type="text" value="${eleve.postnom_eleve || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="prenom_eleve">Prénom</label>
+                            <input id="prenom_eleve" name="prenom_eleve" type="text" value="${eleve.prenom_eleve || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="sexe_eleve">Sexe</label>
+                            <select id="sexe_eleve" name="sexe_eleve" required class="w-full p-2 border border-gray-300 rounded-lg">
+                                <option value="">Sélectionnez</option>
+                                <option value="M" ${eleve.sexe_eleve === 'M' ? 'selected' : ''}>Masculin</option>
+                                <option value="F" ${eleve.sexe_eleve === 'F' ? 'selected' : ''}>Féminin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="classe_selection">Classe</label>
+                            <input id="classe_selection" name="classe_selection" type="text" value="${eleve.classe_selection || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ex: 7e EB">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="nom_parent">Nom du parent</label>
+                            <input id="nom_parent" name="nom_parent" type="text" value="${eleve.nom_parent || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="adresse_eleve">Adresse</label>
+                            <input id="adresse_eleve" name="adresse_eleve" type="text" value="${eleve.adresse_eleve || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1" for="annee_inscription">Année d'inscription</label>
+                            <input id="annee_inscription" name="annee_inscription" type="text" value="${eleve.annee_inscription || ''}" required
+                                class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ex: 2024">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-4">
+                        <button type="button" id="btnAnnulerModif"
+                            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+                $("#resultsContainer").after(formHtml);
+
+                // Annuler la modification
+                $("#btnAnnulerModif").on("click", function () {
+                    $("#formModifContainer").remove();
+                    eleveEnModification = null;
+                });
+
+                // Gérer la soumission du formulaire de modification
+                $("#formModifierEleve").on("submit", function (e) {
+                    e.preventDefault();
+                    modifierEleve();
+                });
+            }
+
+            // Envoi la modification à l'API et met à jour le tableau
+            function modifierEleve() {
+                let form = $("#formModifierEleve");
+                let data = form.serializeArray();
+                data.push({ name: "action", value: "modifierEleve" });
+
+                $.ajax({
+                    url: window.location.href,
+                    method: "POST",
+                    data: $.param(data),
+                    dataType: "json",
+                    success: function (response) {
+                        if (response.success) {
+                            toastr.success(response.message || "Élève modifié avec succès.");
+                            // Recharger la liste avec modifications
+                            chargerEleves();
+                            $("#formModifContainer").remove();
+                            eleveEnModification = null;
+                        } else {
+                            toastr.error(response.message || "Erreur lors de la modification.");
+                        }
+                    },
+                    error: function () {
+                        toastr.error("Erreur lors de la modification.");
+                    }
+                });
+            }
+
+            // Confirmation suppression
+            let idToDelete = null;
+
+            function confirmerSuppression(id) {
+                idToDelete = id;
+                $("#confirmationModal").fadeIn(200);
+            }
+
+            $("#cancelBtn").on("click", function () {
+                idToDelete = null;
+                $("#confirmationModal").fadeOut(200);
+            });
+
+            $("#confirmBtn").on("click", function () {
+                if (idToDelete !== null) {
+                    supprimerEleve(idToDelete);
+                    idToDelete = null;
+                    $("#confirmationModal").fadeOut(200);
+                }
+            });
+
+
+            // Supprimer un élève via AJAX
+            function supprimerEleve(id) {
+                $.ajax({
+                    url: window.location.href,
+                    method: "POST",
+                    data: { action: "supprimerEleve", id: id },
+                    dataType: "json",
+                    success: function (response) {
+                        if (response.success) {
+                            toastr.success(response.message || "Élève supprimé avec succès.");
+                            chargerEleves();
+                        } else {
+                            toastr.error(response.message || "Erreur lors de la suppression.");
+                        }
+                    },
+                    error: function () {
+                        toastr.error("Erreur lors de la suppression.");
+                    }
+                });
+            }
+        });
     </script>
+
+        <script>
+            const parentsOptions = `<?php echo $parentsOptions; ?>`;
+        </script>
+
+
+    <script>
+        $(document).ready(function () {
+            $("#showInscriptionFormBtn").on("click", function (e) {
+                e.preventDefault();
+                // Masquer le message par défaut
+                $("#defaultMessage").hide();
+
+                // Si le formulaire existe déjà, ne pas le recréer
+                if ($("#inscriptionFormContainer").length) {
+                    $("#inscriptionFormContainer").show();
+                    return;
+                }
+
+                // Injecter le formulaire sous #resultsContainer
+                const formHtml = `
+      <div id="inscriptionFormContainer" class="bg-white p-6 rounded-xl shadow-lg max-w-4xl mx-auto">
+        <h3 class="text-xl font-semibold mb-6">Formulaire d'inscription d'un élève</h3>
+        <form id="inscriptionEleveForm" method="POST" action="" class="space-y-4">
+          <input type="hidden" name="inscription_eleve" value="1" />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="nom_eleve" class="block mb-1 font-medium">Nom</label>
+              <input type="text" id="nom_eleve" name="nom_eleve" required
+                class="w-full p-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label for="postnom_eleve" class="block mb-1 font-medium">Postnom</label>
+              <input type="text" id="postnom_eleve" name="postnom_eleve" required
+                class="w-full p-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label for="prenom_eleve" class="block mb-1 font-medium">Prénom</label>
+              <input type="text" id="prenom_eleve" name="prenom_eleve" required
+                class="w-full p-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label for="sexe_eleve" class="block mb-1 font-medium">Sexe</label>
+              <select id="sexe_eleve" name="sexe_eleve" required
+                class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">Sélectionnez</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+            </div>
+            <div>
+                <label for="classe_selection" class="block mb-1 font-medium">Classe</label>
+                <select id="classe_selection" name="classe_selection" required
+                    class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="">Sélectionnez une classe</option>
+                    <option value="7e EB">7e EB</option>
+                    <option value="8e EB">8e EB</option>
+                    <option value="1ere SC">1ère SC</option>
+                    <option value="1ere CG">1ère CG</option>
+                    <option value="1ere HP">1ère HP</option>
+                    <option value="1ere MG">1ère MG</option>
+                    <option value="1ere ELECT">1ère ELECT</option>
+                    <option value="2ere SC">2ère SC</option>
+                    <option value="2ere CG">2ère CG</option>
+                    <option value="2ere HP">2ère HP</option>
+                    <option value="2ere MG">2ère MG</option>
+                    <option value="2ere ELECT">2ère ELECT</option>
+                    <option value="2eme TCC">2ème TCC</option>
+                    <option value="3ere SC">3ère SC</option>
+                    <option value="3ere CG">3ère CG</option>
+                    <option value="3ere HP">3ère HP</option>
+                    <option value="3ere MG">3ère MG</option>
+                    <option value="3ere ELECT">3ère ELECT</option>
+                    <option value="3eme TCC">3ème TCC</option>
+                    <option value="4ere SC">4ère SC</option>
+                    <option value="4ere CG">4ère CG</option>
+                    <option value="4ere HP">4ère HP</option>
+                    <option value="4ere MG">4ère MG</option>
+                    <option value="4ere ELECT">4ère ELECT</option>
+                    <option value="4eme TCC">4ème TCC</option>
+                </select>
+                </div>
+
+            <div>
+                <label for="nom_parent" class="block mb-1 font-medium">Nom du parent</label>
+                <select id="nom_parent" name="nom_parent" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="">Sélectionnez un parent</option>
+                    ${parentsOptions}
+                </select>
+            </div>
+            <div>
+              <label for="adresse_eleve" class="block mb-1 font-medium">Adresse</label>
+              <input type="text" id="adresse_eleve" name="adresse_eleve" required
+                class="w-full p-2 border border-gray-300 rounded-lg" />
+            </div>
+           <div>
+            <label for="annee_inscription" class="block mb-1 font-medium">Année d'inscription</label>
+            <input type="text" id="annee_inscription" name="annee_inscription" required placeholder="Ex: 2024-01"
+                value="<?php echo date('Y') . '-'; ?>" 
+                class="w-full p-2 border border-gray-300 rounded-lg" />
+            </div>
+
+
+          </div>
+          <div class="mt-6 flex justify-end space-x-4">
+            <button type="button" id="annulerInscriptionBtn"
+              class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Annuler</button>
+            <button type="submit"
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg">Enregistrer</button>
+          </div>
+          <div id="messageInscription" class="mt-4"></div>
+        </form>
+      </div>
+    `;
+
+                $("#resultsContainer").html(formHtml);
+
+                // Annuler : masquer formulaire et réafficher le message par défaut
+                $("#annulerInscriptionBtn").on("click", function () {
+                    $("#inscriptionFormContainer").hide();
+                    $("#defaultMessage").show();
+                    $("#resultsContainer").html("");
+                });
+
+                // Soumission du formulaire en AJAX
+                $("#inscriptionEleveForm").on("submit", function (e) {
+                    e.preventDefault();
+
+                    const formData = $(this).serialize();
+
+                    $.ajax({
+                        url: window.location.href,
+                        method: "POST",
+                        data: formData,
+                        dataType: "json",
+                        success: function (response) {
+                            if (response.success) {
+                                toastr.success(response.message || "Inscription réussie.");
+                                // Réinitialiser le formulaire
+                                $("#inscriptionEleveForm")[0].reset();
+                            } else {
+                                $("#messageInscription").html(`<p class="text-red-500">${response.message || "Erreur lors de l'inscription."}</p>`);
+                                toastr.error(response.message || "Erreur lors de l'inscription.");
+                            }
+                        },
+                        error: function () {
+                            toastr.error("Erreur réseau lors de l'inscription.");
+                        }
+                    });
+                });
+            });
+        });
+
+    </script>
+
+
 
 
 

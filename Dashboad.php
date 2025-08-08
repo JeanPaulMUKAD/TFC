@@ -213,7 +213,7 @@
                         <!-- item-->
                         <h6 class="dropdown-header">Administration</h6>
                         <a class="dropdown-item" href="#"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profil</span></a>
-                        <a class="dropdown-item" href="/logoutParent"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Deconnexion</span></a>
+                        <a class="dropdown-item" href="/logoutCaissier"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle" data-key="t-logout">Deconnexion</span></a>
                     </div>
                 </div>
             </div>
@@ -314,7 +314,7 @@
                                         <a href="./assets/Paiements/historique_paiement.php" class="nav-link" data-key="t-ecommerce"> Rapports </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="/logoutParent" class="nav-link " data-key="t-ecommerce"> Deconnexion </a>
+                                        <a href="/logoutCaisser" class="nav-link " data-key="t-ecommerce"> Deconnexion </a>
                                     </li>
                                    
                                 </ul>

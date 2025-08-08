@@ -4,7 +4,7 @@ require_once __DIR__ . '/../Controllers/AuthController.php';
 $auth = new AuthController();
 $message = "";
 
-$current_user_id = $_SESSION['id_user'] ?? null;
+$current_user_id = $_SESSION['user_id'] ?? null;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // INSCRIPTION
@@ -55,67 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // MODIFICATION
-    if (isset($_POST['modifier_eleve'])) {
-        $id = intval($_POST['id'] ?? 0);
-        $nom_eleve = trim($_POST['nom_eleve'] ?? '');
-        $postnom_eleve = trim($_POST['postnom_eleve'] ?? '');
-        $prenom_eleve = trim($_POST['prenom_eleve'] ?? '');
-        $sexe_eleve = $_POST['sexe_eleve'] ?? '';
-        $classe_selection = $_POST['classe_selection'] ?? '';
-        $nom_parent = trim($_POST['nom_parent'] ?? '');
-        $adresse_eleve = trim($_POST['adresse_eleve'] ?? '');
-        $annee_inscription = trim($_POST['annee_inscription'] ?? '');
-
-        if (
-            empty($id) || empty($nom_eleve) || empty($postnom_eleve) || empty($prenom_eleve) ||
-            empty($sexe_eleve) || empty($classe_selection) || empty($nom_parent) ||
-            empty($adresse_eleve) || empty($annee_inscription)
-        ) {
-            $message = "<p class='text-red-500 text-center'>Tous les champs sont requis pour la modification.</p>";
-        } else {
-            // Vérifiez que $current_user_id n'est pas null avant de tenter la modification
-            if ($current_user_id === null) {
-                $message = "<p class='text-red-500 text-center'>Erreur : L'ID de l'utilisateur parent n'est pas disponible. Veuillez vous connecter.</p>";
-            } else {
-                $result = $auth->modifierEleve(
-                    $id,
-                    $nom_eleve,
-                    $postnom_eleve,
-                    $prenom_eleve,
-                    $sexe_eleve,
-                    $classe_selection,
-                    $nom_parent,
-                    $adresse_eleve,
-                    $annee_inscription,
-                    $current_user_id // <- IMPORTANT : Passez l'ID du parent ici !
-                );
-
-                if ($result['success']) {
-                    $message = "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
-                } else {
-                    $message = "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
-                }
-            }
-        }
-    }
-
-    // SUPPRESSION 
-    if (isset($_POST['supprimer_eleve'])) {
-        $matricule = trim($_POST['matricule'] ?? '');
-
-        if (empty($matricule)) {
-            $message = "<p class='text-red-500 text-center'>Veuillez saisir un matricule pour la suppression.</p>";
-        } else {
-            $result = $auth->supprimerEleveParMatricule($matricule);
-
-            if ($result['success']) {
-                $message = "<p class='text-green-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
-            } else {
-                $message = "<p class='text-red-500 text-center'>" . htmlspecialchars($result['message']) . "</p>";
-            }
-        }
-    }
+    
 }
 ?>
 
@@ -288,112 +228,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                     <div class="text-center">
                                                         <button type="submit" class="btn btn-primary"
                                                             onclick="toggleForm('inscription')">Inscrire</button>
-                                                        <button type="button" class="btn btn-warning"
-                                                            onclick="toggleForm('modifier')">Modifier</button>
-                                                        <button type="button" class="btn btn-danger"
-                                                            onclick="toggleForm('supprimer')">Supprimer</button>
+                                                        
                                                     </div>
 
 
                                                 </form>
                                             </div>
 
-                                            <!-- FORMULAIRE DE MODIFICATION -->
-                                            <div id="form_modifier" style="display: none;">
-                                                <form method="POST">
-                                                    <input type="hidden" name="modifier_eleve" value="1">
-                                                    <div class="mb-3"><label>Matricule </label><input type="text"
-                                                            name="matricule_original" class="form-control"
-                                                            placeholder="Veillez entrer l'ancien matricule" required>
-                                                    </div>
-                                                    <!-- mêmes champs que l’inscription -->
-                                                    <div class="mb-3"><label>Nouveau nom</label><input type="text"
-                                                            name="nom_eleve" class="form-control"
-                                                            placeholder="Veillez entrer le nom" required></div>
-                                                    <div class="mb-3"><label>Nouveau post-nom</label><input type="text"
-                                                            name="postnom_eleve" class="form-control"
-                                                            placeholder="Veillez entrer le post-nom" required></div>
-                                                    <div class="mb-3"><label>Nouveau prénom</label><input type="text"
-                                                            name="prenom_eleve" class="form-control"
-                                                            placeholder="Veillez entrer le prénom" required></div>
-                                                    <div class="mb-3"><label>Sexe de l’élève</label>
-                                                        <select name="sexe_eleve" class="form-control" required>
-                                                            <option value="">Sélectionnez</option>
-                                                            <option value="M">Masculin</option>
-                                                            <option value="F">Féminin</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3"><label>Classe</label>
-                                                        <select class="form-control" id="classe_selection"
-                                                            name="classe_selection" required>
-                                                            <option value="">Choisir classe</option>
-                                                            <option value="7e EB">7e EB</option>
-                                                            <option value="8e EB">8e EB</option>
-                                                            <option value="1ere SC">1ère SC</option>
-                                                            <option value="1ere CG">1ère CG</option>
-                                                            <option value="1ere HP">1ère HP</option>
-                                                            <option value="1ere MG">1ère MG</option>
-                                                            <option value="1ere ELECT">1ère ELECT</option>
-                                                            <option value="2ere SC">2ère SC</option>
-                                                            <option value="2ere CG">2ère CG</option>
-                                                            <option value="2ere HP">2ère HP</option>
-                                                            <option value="2ere MG">2ère MG</option>
-                                                            <option value="2ere ELECT">2ère ELECT</option>
-                                                            <option value="2eme TCC">2ème TCC</option>
-                                                            <option value="3ere SC">3ère SC</option>
-                                                            <option value="3ere CG">3ère CG</option>
-                                                            <option value="3ere HP">3ère HP</option>
-                                                            <option value="3ere MG">3ère MG</option>
-                                                            <option value="3ere ELECT">3ère ELECT</option>
-                                                            <option value="3eme TCC">3ème TCC</option>
-                                                            <option value="4ere SC">4ère SC</option>
-                                                            <option value="4ere CG">4ère CG</option>
-                                                            <option value="4ere HP">4ère HP</option>
-                                                            <option value="4ere MG">4ère MG</option>
-                                                            <option value="4ere ELECT">4ère ELECT</option>
-                                                            <option value="4eme TCC">4ème TCC</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3"><label>Nom du parent</label>
-                                                        <input type="text" name="nom_parent" class="form-control"
-                                                            placeholder="Entrez le nom du parent(tuteur) de l'eleve"
-                                                            required>
-                                                    </div>
-                                                    <div class="mb-3"><label>Adresse de l’élève</label>
-                                                        <input type="text" name="adresse_eleve" class="form-control"
-                                                            placeholder="Entrez l'adresse de l’élève" required>
-                                                    </div>
-                                                    <div class="mb-3"><label>Année d'inscription</label>
-                                                        <input type="text" name="annee_inscription" class="form-control"
-                                                            placeholder="(ex: 2024-2025)" required>
-                                                    </div>
-                                                    <div class="text-center">
-                                                        <button type="submit" class="btn btn-warning"
-                                                            onclick="toggleForm('modifier')">Modifier</button>
-                                                        <button class="btn btn-secondary" type="button"
-                                                            onclick="toggleForm('inscription')">Retour</button>
-                                                    </div>
-
-                                                </form>
-                                            </div>
-
-                                            <!-- FORMULAIRE DE SUPPRESSION -->
-                                            <div id="form_supprimer" style="display: none;">
-                                                <form method="POST">
-                                                    <input type="hidden" name="supprimer_eleve" value="1">
-                                                    <div class="mb-3"><label>Matricule de l’élève</label><input
-                                                            type="text" name="matricule" class="form-control"
-                                                            placeholder="Veillez entrer le matricule" required>
-                                                    </div>
-                                                    <div class="text-center">
-                                                        <button type="submit" class="btn btn-danger"
-                                                            onclick="toggleForm('supprimer')">Supprimer</button>
-                                                        <button class="btn btn-secondary" type="button"
-                                                            onclick="toggleForm('inscription')">Retour</button>
-                                                    </div>
-
-                                                </form>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -446,8 +287,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <script>
         function toggleForm(formType) {
             document.getElementById('form_inscription').style.display = 'none';
-            document.getElementById('form_modifier').style.display = 'none';
-            document.getElementById('form_supprimer').style.display = 'none';
+            
             document.getElementById('form_' + formType).style.display = 'block';
         }
     </script>
