@@ -44,9 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <body class="bg-gray-100 text-black">
   <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 bg-white shadow-md">
-    <div class="text-2xl font-bold">
-      <span class="text-black">C.S.P.P</span><span class="text-green-600 font-extrabold">.UNILU</span>
-    </div>
+    <div class="text-2xl font-bold flex items-center">
+            <img src="/assets/images/logo_pp2.png" alt="Logo" class="h-10 w-10 mr-2" />
+            <span class="text-black">C.S.P.P</span><span class="text-green-600 font-extrabold">.UNILU</span>
+        </div>
     <div class="flex items-center space-x-4">
       <a href="mailto:administrationcsppunilu@gmail.com" class="text-sm font-medium">Assistance</a>
       <a href="/logoutPrefet"
