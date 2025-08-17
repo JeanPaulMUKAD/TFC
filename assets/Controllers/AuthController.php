@@ -31,13 +31,13 @@ class AuthController
     public function login($names, $password)
     {
         $names = $this->conn->real_escape_string($names);
-        $sql = "SELECT * FROM utilisateurs WHERE Names_User = '$names'";
+        $sql = "SELECT * FROM utilisateurs WHERE Email = '$names'";
         $result = $this->conn->query($sql);
 
         if ($result->num_rows > 0) {
             $row = $result->fetch_assoc();
             if (password_verify($password, $row['Password_User'])) {
-                $_SESSION['username'] = $row['Names_User'];
+                $_SESSION['username'] = $row['Email'];
                 $_SESSION['user_id'] = $row['id'];
                 $_SESSION['Role_User'] = $row['Role_User'];
                 $this->conn->query("UPDATE utilisateurs SET is_connected = 1 WHERE id = " . $row['id']);

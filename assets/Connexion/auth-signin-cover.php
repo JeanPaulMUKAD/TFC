@@ -6,7 +6,7 @@
     $message = "";
 
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $names = $_POST['Names_User'];
+        $names = $_POST['Email'];
         $password = $_POST['Password_User'];
         $message = $auth->login($names, $password);
     }
@@ -103,8 +103,8 @@
                                             <form action="#" method="POST">
 
                                                 <div class="mb-3">
-                                                    <label for="Names_User" class="form-label">Nom complet<span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="Names_User" name="Names_User" placeholder="Entrez votre nom complet" required>
+                                                    <label for="Email" class="form-label">Login<span class="text-danger">*</span></label>
+                                                    <input type="email" class="form-control" id="Email" name="Email" placeholder="Entrez votre nom complet" required>
                                                 </div>
 
                                                 <div class="mb-3">
