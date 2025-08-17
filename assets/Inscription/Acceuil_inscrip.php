@@ -215,7 +215,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
         </div>
         <div class="flex items-center space-x-4">
             <a href="mailto:administrationcsppunilu@gmail.com" target="_blank" class="text-sm font-medium">Aide</a>
-            <a href="/logoutParent"
+            <a href="/logoutsec"
                 class="bg-gradient-to-r from-red-600 to-orange-500 hover:from-orange-600 hover:to-red-500 transition text-white font-semibold py-2 px-4 rounded-full text-sm">
                 Se déconnecter
             </a>
@@ -431,10 +431,10 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                     <td class="px-4 py-2 border">${eleve.adresse_eleve || ''}</td>
                     <td class="px-4 py-2 border">${eleve.annee_inscription || ''}</td>
                     <td class="px-4 py-2 border text-center space-x-2">
-                        <button class="modifierEleveBtn text-blue-600 hover:text-blue-800" title="Modifier">
+                        <button class="modifierEleveBtn text-orange-600 hover:text-orange-800 transition" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="supprimerEleveBtn text-red-600 hover:text-red-800" title="Supprimer">
+                        <button class="supprimerEleveBtn text-red-600 hover:text-red-800 transition" title="Supprimer">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
@@ -546,7 +546,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                             Annuler
                         </button>
                         <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+                            class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg">
                             Enregistrer
                         </button>
                     </div>
@@ -642,9 +642,9 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
         });
     </script>
 
-        <script>
-            const parentsOptions = `<?php echo $parentsOptions; ?>`;
-        </script>
+    <script>
+        const parentsOptions = `<?php echo $parentsOptions; ?>`;
+    </script>
 
 
     <script>
@@ -668,22 +668,22 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
           <input type="hidden" name="inscription_eleve" value="1" />
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label for="nom_eleve" class="block mb-1 font-medium">Nom</label>
+              <label for="nom_eleve" class="block mb-1 font-medium">Nom<span class="text-orange-600">*</span></label>
               <input type="text" id="nom_eleve" name="nom_eleve" required
                 class="w-full p-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
-              <label for="postnom_eleve" class="block mb-1 font-medium">Postnom</label>
+              <label for="postnom_eleve" class="block mb-1 font-medium">Postnom<span class="text-orange-600">*</span></label>
               <input type="text" id="postnom_eleve" name="postnom_eleve" required
                 class="w-full p-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
-              <label for="prenom_eleve" class="block mb-1 font-medium">Prénom</label>
+              <label for="prenom_eleve" class="block mb-1 font-medium">Prénom<span class="text-orange-600">*</span></label>
               <input type="text" id="prenom_eleve" name="prenom_eleve" required
                 class="w-full p-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
-              <label for="sexe_eleve" class="block mb-1 font-medium">Sexe</label>
+              <label for="sexe_eleve" class="block mb-1 font-medium">Sexe<span class="text-orange-600">*</span></label>
               <select id="sexe_eleve" name="sexe_eleve" required
                 class="w-full p-2 border border-gray-300 rounded-lg">
                 <option value="">Sélectionnez</option>
@@ -692,7 +692,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
               </select>
             </div>
             <div>
-                <label for="classe_selection" class="block mb-1 font-medium">Classe</label>
+                <label for="classe_selection" class="block mb-1 font-medium">Classe<span class="text-orange-600">*</span></label>
                 <select id="classe_selection" name="classe_selection" required
                     class="w-full p-2 border border-gray-300 rounded-lg">
                     <option value="">Sélectionnez une classe</option>
@@ -725,19 +725,19 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                 </div>
 
             <div>
-                <label for="nom_parent" class="block mb-1 font-medium">Nom du parent</label>
+                <label for="nom_parent" class="block mb-1 font-medium">Nom du parent<span class="text-orange-600">*</span></label>
                 <select id="nom_parent" name="nom_parent" required class="w-full p-2 border border-gray-300 rounded-lg">
                     <option value="">Sélectionnez un parent</option>
                     ${parentsOptions}
                 </select>
             </div>
             <div>
-              <label for="adresse_eleve" class="block mb-1 font-medium">Adresse</label>
+              <label for="adresse_eleve" class="block mb-1 font-medium">Adresse<span class="text-orange-600">*</span></label>
               <input type="text" id="adresse_eleve" name="adresse_eleve" required
                 class="w-full p-2 border border-gray-300 rounded-lg" />
             </div>
            <div>
-            <label for="annee_inscription" class="block mb-1 font-medium">Année d'inscription</label>
+            <label for="annee_inscription" class="block mb-1 font-medium">Année d'inscription<span class="text-orange-600">*</span></label>
             <input type="text" id="annee_inscription" name="annee_inscription" required placeholder="Ex: 2024-01"
                 value="<?php echo date('Y') . '-'; ?>" 
                 class="w-full p-2 border border-gray-300 rounded-lg" />
@@ -749,7 +749,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
             <button type="button" id="annulerInscriptionBtn"
               class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Annuler</button>
             <button type="submit"
-              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg">Enregistrer</button>
+              class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg">Enregistrer</button>
           </div>
           <div id="messageInscription" class="mt-4"></div>
         </form>

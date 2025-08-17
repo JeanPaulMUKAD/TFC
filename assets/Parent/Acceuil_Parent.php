@@ -1,40 +1,30 @@
 <?php
 
-// Assurez-vous que le chemin vers AuthController est correct
+
 require_once '../Controllers/AuthController.php';
 
 $auth = new AuthController();
 $messageErreur = null;
 
-// Démarrez la session si elle n'est pas déjà démarrée
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
+// Récupération des informations du parent connecté
 $loggedInParentName = $_SESSION['username'] ?? '';
+$loggedInParentId = $_SESSION['parent_id'] ?? null;
 
-
-// --- NOUVEAU BLOC POUR LA GÉNÉRATION DE LA FACTURE ---
+// --- BLOC DE GÉNÉRATION DE FACTURE (POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'generate_invoice') {
     ob_start();
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 
-    // Inclure la bibliothèque FPDF ici
     require_once '../../fpdf.php';
 
     $data = $_POST;
-    if (
-        !isset($data['paiement_id']) ||
-        !isset($data['matricule']) ||
-        !isset($data['nom_eleve']) ||
-        !isset($data['classe_eleve']) ||
-        !isset($data['montant_paye']) ||
-        !isset($data['motif_paiement']) ||
-        !isset($data['date_paiement'])
-    ) {
-        http_response_code(400);
-        exit('Erreur : Données de facture incomplètes.');
+    $requiredFields = ['paiement_id', 'matricule', 'nom_eleve', 'classe_eleve', 'montant_paye', 'motif_paiement', 'date_paiement'];
+    foreach ($requiredFields as $field) {
+        if (!isset($data[$field])) {
+            http_response_code(400);
+            exit('Erreur : Données de facture incomplètes.');
+        }
     }
 
     $paiement_id = $data['paiement_id'];
@@ -53,75 +43,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'gener
     $pdf->Cell(0, 10, mb_convert_encoding('Facture de paiement', 'ISO-8859-1', 'UTF-8'), 0, 1, 'C');
     $pdf->Ln(10);
     $pdf->SetFont('Arial', '', 12);
-    $pdf->Cell(50, 10, mb_convert_encoding('ID Paiement:', 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($paiement_id, 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding('Matricule:', 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($matricule, 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding("Nom de l'élève:", 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding("{$nom_eleve} {$postnom_eleve} {$prenom_eleve}", 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding('Classe:', 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($classe_eleve, 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding('Motif:', 'ISO-859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($motif_paiement, 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding('Montant payé:', 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($montant_paye, 'ISO-8859-1', 'UTF-8'), 0, 1);
-    $pdf->Cell(50, 10, mb_convert_encoding('Date de paiement:', 'ISO-8859-1', 'UTF-8'), 0, 0);
-    $pdf->Cell(0, 10, mb_convert_encoding($date_paiement, 'ISO-8859-1', 'UTF-8'), 0, 1);
+    $pdf->Cell(50, 10, 'ID Paiement:', 0, 0);
+    $pdf->Cell(0, 10, $paiement_id, 0, 1);
+    $pdf->Cell(50, 10, 'Matricule:', 0, 0);
+    $pdf->Cell(0, 10, $matricule, 0, 1);
+    $pdf->Cell(50, 10, "Nom de l'élève:", 0, 0);
+    $pdf->Cell(0, 10, "{$nom_eleve} {$postnom_eleve} {$prenom_eleve}", 0, 1);
+    $pdf->Cell(50, 10, 'Classe:', 0, 0);
+    $pdf->Cell(0, 10, $classe_eleve, 0, 1);
+    $pdf->Cell(50, 10, 'Motif:', 0, 0);
+    $pdf->Cell(0, 10, $motif_paiement, 0, 1);
+    $pdf->Cell(50, 10, 'Montant payé:', 0, 0);
+    $pdf->Cell(0, 10, $montant_paye, 0, 1);
+    $pdf->Cell(50, 10, 'Date de paiement:', 0, 0);
+    $pdf->Cell(0, 10, $date_paiement, 0, 1);
 
     ob_end_clean();
     header('Content-Type: application/pdf');
     $pdf->Output('I', "Facture_{$matricule}_{$paiement_id}.pdf");
     exit;
 }
-// --- Bloc UNIQUE pour toutes les autres requêtes POST (y compris AJAX) ---
+
+// --- BLOC AJAX / POST GÉNÉRAL (API) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    $resultat = ['success' => false, 'message' => 'Action non traitée.'];
 
     $action = $_POST['action'] ?? '';
+    $resultat = ['success' => false, 'message' => 'Action non traitée.'];
 
-    error_log("Requête POST reçue dans Acceuil_Parent.php. Action: " . $action);
-    error_log("POST data: " . print_r($_POST, true));
-
-    if ($action === 'get_paiements') {
-        if (isset($_POST['matricule'])) {
-            $matricule = htmlspecialchars(trim($_POST['matricule']));
-            $resultat = $auth->obtenirPaiementsParMatricule($matricule);
-            error_log("Résultat de obtenirPaiementsParMatricule: " . json_encode($resultat));
-        } else {
-            $resultat = ['success' => false, 'message' => 'Matricule manquant pour get_paiements.'];
-            error_log("Erreur: Matricule manquant.");
-        }
-    } elseif ($action === 'get_paiements_by_parent') {
-        if (isset($_POST['parent_name'])) {
-            $parentNameFromAjax = htmlspecialchars(trim($_POST['parent_name']));
-
-            error_log("parentNameFromAjax (via POST): " . $parentNameFromAjax);
-            error_log("loggedInParentName (via session): " . $loggedInParentName);
-
-            if ($parentNameFromAjax !== $loggedInParentName || empty($loggedInParentName)) {
-                $resultat = ['success' => false, 'message' => 'Accès non autorisé ou parent non identifié.'];
-                error_log("Accès non autorisé ou non-concordance des noms de parent: " . json_encode($resultat));
+    switch ($action) {
+        case 'get_paiements':
+            $matricule = $_POST['matricule'] ?? '';
+            if ($matricule) {
+                $resultat = $auth->obtenirPaiementsParMatricule($matricule);
             } else {
+                $resultat['message'] = 'Matricule manquant pour get_paiements.';
+            }
+            break;
+
+        case 'get_paiements_by_parent':
+            $parentNameFromAjax = $_POST['parent_name'] ?? '';
+            if ($parentNameFromAjax && $parentNameFromAjax === $loggedInParentName) {
                 $resultat = $auth->obtenirPaiementsParNomParent($parentNameFromAjax);
-                error_log("Résultat final de obtenirPaiementsParNomParent: " . json_encode($resultat));
-            }
-        } elseif ($action === 'get_enfants_et_statut_paiement') {
-            if ($loggedInParentId !== null) {
-                $resultat = $auth->obtenirEnfantsEtStatutPaiementParIdParent($loggedInParentId);
-                error_log("Résultat de obtenirEnfantsEtStatutPaiementParIdParent: " . json_encode($resultat));
             } else {
-                $resultat = ['success' => false, 'message' => 'ID du parent non disponible en session. Veuillez vous reconnecter.'];
-                error_log("Erreur: ID parent non disponible en session.");
+                $resultat['message'] = 'Parent non autorisé ou non identifié.';
             }
-        } else {
-            $resultat = ['success' => false, 'message' => 'Clé "parent_name" manquante dans la requête POST.'];
-            error_log("Erreur: Clé 'parent_name' manquante.");
+            break;
 
-        }
-    } else {
-        $resultat = ['success' => false, 'message' => 'Action POST non reconnue.'];
-        error_log("Action POST non reconnue: " . json_encode($resultat));
+        case 'get_enfants_et_statut_paiement':
+            if ($loggedInParentId) {
+                $resultat = $auth->obtenirEnfantsEtStatutPaiementParIdParent($loggedInParentId);
+            } else {
+                $resultat['message'] = 'ID du parent non disponible en session. Veuillez vous reconnecter.';
+            }
+            break;
+
+        case 'get_enfants_by_parent':
+            if ($loggedInParentId) {
+                $resultat = $auth->obtenirEnfantsParIdParent($loggedInParentId);
+            } else {
+                $resultat['message'] = 'ID parent non disponible en session.';
+            }
+            break;
+
+        default:
+            $resultat['message'] = 'Action POST non reconnue.';
+            break;
     }
 
     echo json_encode($resultat);
@@ -129,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 ?>
+
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -232,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
                 <div class="flex items-center">
                     <div class="bg-purple-100 text-purple-600 p-3 rounded-full mr-4">
-                         <i class="fas fa-headset fa-lg"></i>
+                        <i class="fas fa-headset fa-lg"></i>
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-500">Assistance</p>
@@ -248,25 +236,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-info-circle fa-2x mb-4 text-gray-400"></i>
                 <p class="text-lg">Sélectionnez une option ci-dessus pour afficher les données.</p>
             </div>
-            
+
             <div id="paymentsTableContainer" style="display: none;">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-4">Historique des Paiements de Votre Enfant</h2>
                 <div class="table-responsive">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom Enfant</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post-Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adresse</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Paiement</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Matricule</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nom Enfant</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Post-Nom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Prénom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sexe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Adresse</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Montant Payé</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Motif</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date Paiement</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Statut</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action</th>
                             </tr>
                         </thead>
                         <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
@@ -285,27 +297,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post-Nom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prénom</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Matricule</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Post-Nom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Prénom</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sexe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Adresse</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Année d'Inscription</th>
+                               
                             </tr>
                         </thead>
                         <tbody id="childrenTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                    Chargement de la liste des enfants...</td>
+                                <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    Chargement de la liste des enfants...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
+
         </div>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const tableBody = document.getElementById("childrenTableBody");
+            const tableContainer = document.getElementById("childrenTableContainer");
+
+            // Préparer la requête AJAX
+            fetch('Acceuil_Parent.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ action: 'get_enfants_by_parent' })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('La réponse du réseau n\'a pas été valide.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    tableBody.innerHTML = ''; // Vider le message de chargement
+
+                    if (data.success && data.enfants.length > 0) {
+                        data.enfants.forEach(enfant => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.matricule}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.nom_eleve}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.postnom_eleve}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.prenom_eleve}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.sexe_eleve}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.classe_selection}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.adresse_eleve}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.annee_inscription}</td>
+                            
+                        `;
+                            tableBody.appendChild(tr);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">${data.message || 'Aucun enfant trouvé.'}</td></tr>`;
+                    }
+
+                    tableContainer.style.display = 'block'; // Afficher le tableau
+                })
+                .catch(error => {
+                    console.error('Erreur AJAX:', error);
+                    tableBody.innerHTML = `<tr><td colspan="9" class="px-6 py-4 text-center text-red-500">Erreur lors du chargement des enfants.</td></tr>`;
+                    tableContainer.style.display = 'block';
+                });
+        });
+    </script>
+
 
     <script>
         // Fonction pour cacher tous les conteneurs et afficher le message par défaut
@@ -336,7 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 
 
-    
+
 
 
 

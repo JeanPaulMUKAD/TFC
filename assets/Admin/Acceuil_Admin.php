@@ -1,107 +1,155 @@
 <?php
 
-    require_once __DIR__ . '/../Controllers/AuthController.php';
-    $auth = new AuthController();
+require_once __DIR__ . '/../Controllers/AuthController.php';
+$auth = new AuthController();
 
-    // Initialisation de $_SESSION['username']
-    if (!isset($_SESSION['username'])) {
-        $_SESSION['username'] = 'Admin';
+// Initialisation de $_SESSION['username']
+if (!isset($_SESSION['username'])) {
+    $_SESSION['username'] = 'Admin';
+}
+
+$dbError = null;
+if ($auth->conn->connect_error) {
+    $dbError = "Erreur de connexion à la base de données : " . $auth->conn->connect_error;
+}
+
+$paymentCount = 0;
+$paymentTypes = [];
+
+if (!$dbError) {
+    // Récupérer nombre total types de paiement
+    $sql2 = "SELECT COUNT(*) as total FROM payementtype";
+    $result2 = $auth->conn->query($sql2);
+    if ($result2 && $row2 = $result2->fetch_assoc()) {
+        $paymentCount = (int) $row2['total'];
     }
 
-    $dbError = null;
-    if ($auth->conn->connect_error) {
-        $dbError = "Erreur de connexion à la base de données : " . $auth->conn->connect_error;
-    }
-
-    $paymentCount = 0;
-    $paymentTypes = [];
-
-    if (!$dbError) {
-        // Récupérer nombre total types de paiement
-        $sql2 = "SELECT COUNT(*) as total FROM payementtype";
-        $result2 = $auth->conn->query($sql2);
-        if ($result2 && $row2 = $result2->fetch_assoc()) {
-            $paymentCount = (int) $row2['total'];
+    // Récupérer types de paiement pour affichage initial
+    $sql_payments = "SELECT id, nom_type FROM payementtype";
+    $result_payments = $auth->conn->query($sql_payments);
+    if ($result_payments && $result_payments->num_rows > 0) {
+        while ($row = $result_payments->fetch_assoc()) {
+            $paymentTypes[] = $row;
         }
-
-        // Récupérer types de paiement pour affichage initial
-        $sql_payments = "SELECT id, nom_type FROM payementtype";
-        $result_payments = $auth->conn->query($sql_payments);
-        if ($result_payments && $result_payments->num_rows > 0) {
-            while ($row = $result_payments->fetch_assoc()) {
-                $paymentTypes[] = $row;
-            }
-        }
     }
+}
 
-    $notification = null;
+$notification = null;
 
-    // --- Gestion POST utilisateurs ---
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['ajouter', 'modifier', 'supprimer'])) {
-        $action = $_POST['action'];
-        $id = $_POST['user_id'] ?? null;
-        $name = trim($_POST['Names_User'] ?? '');
-        $email = trim($_POST['Email'] ?? '');
-        $role = $_POST['Role_User'] ?? null;
-        $password = $_POST['Password_User'] ?? '';
-        $confirmPassword = $_POST['Confirm_Password'] ?? '';
+// --- Gestion POST utilisateurs ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['ajouter', 'modifier', 'supprimer'])) {
+    $action = $_POST['action'];
+    $id = $_POST['user_id'] ?? null;
+    $name = trim($_POST['Names_User'] ?? '');
+    $email = trim($_POST['Email'] ?? '');
+    $role = $_POST['Role_User'] ?? null;
+    $password = $_POST['Password_User'] ?? '';
+    $confirmPassword = $_POST['Confirm_Password'] ?? '';
 
-        if ($action === 'ajouter') {
-            if ($password !== $confirmPassword) {
-                $notification = ['type' => 'error', 'message' => 'Les mots de passe ne correspondent pas.'];
+    if ($action === 'ajouter') {
+        if ($password !== $confirmPassword) {
+            $notification = ['type' => 'error', 'message' => 'Les mots de passe ne correspondent pas.'];
+        } else {
+            $hashed = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $auth->conn->prepare("INSERT INTO utilisateurs (Names_User, Email, Password_User, Role_User) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $name, $email, $hashed, $role);
+            if ($stmt->execute()) {
+                $notification = ['type' => 'success', 'message' => 'Utilisateur ajouté avec succès !'];
             } else {
+                $notification = ['type' => 'error', 'message' => 'Erreur lors de l\'ajout de l\'utilisateur.'];
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'modifier' && $id) {
+        if ($password && $password !== $confirmPassword) {
+            $notification = ['type' => 'error', 'message' => 'Les mots de passe ne correspondent pas.'];
+        } else {
+            if ($password) {
                 $hashed = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $auth->conn->prepare("INSERT INTO utilisateurs (Names_User, Email, Password_User, Role_User) VALUES (?, ?, ?, ?)");
-                $stmt->bind_param("ssss", $name, $email, $hashed, $role);
-                if ($stmt->execute()) {
-                    $notification = ['type' => 'success', 'message' => 'Utilisateur ajouté avec succès !'];
-                } else {
-                    $notification = ['type' => 'error', 'message' => 'Erreur lors de l\'ajout de l\'utilisateur.'];
-                }
-                $stmt->close();
-            }
-        } elseif ($action === 'modifier' && $id) {
-            if ($password && $password !== $confirmPassword) {
-                $notification = ['type' => 'error', 'message' => 'Les mots de passe ne correspondent pas.'];
+                $stmt = $auth->conn->prepare("UPDATE utilisateurs SET Names_User=?, Email=?, Password_User=?, Role_User=? WHERE id=?");
+                $stmt->bind_param("ssssi", $name, $email, $hashed, $role, $id);
             } else {
-                if ($password) {
-                    $hashed = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $auth->conn->prepare("UPDATE utilisateurs SET Names_User=?, Email=?, Password_User=?, Role_User=? WHERE id=?");
-                    $stmt->bind_param("ssssi", $name, $email, $hashed, $role, $id);
-                } else {
-                    $stmt = $auth->conn->prepare("UPDATE utilisateurs SET Names_User=?, Email=?, Role_User=? WHERE id=?");
-                    $stmt->bind_param("sssi", $name, $email, $role, $id);
-                }
-                if ($stmt->execute()) {
-                    $notification = ['type' => 'success', 'message' => 'Utilisateur modifié avec succès !'];
-                } else {
-                    $notification = ['type' => 'error', 'message' => 'Erreur lors de la modification de l\'utilisateur.'];
-                }
-                $stmt->close();
+                $stmt = $auth->conn->prepare("UPDATE utilisateurs SET Names_User=?, Email=?, Role_User=? WHERE id=?");
+                $stmt->bind_param("sssi", $name, $email, $role, $id);
             }
-        } elseif ($action === 'supprimer' && $id) {
-            $stmt = $auth->conn->prepare("DELETE FROM utilisateurs WHERE id=?");
+            if ($stmt->execute()) {
+                $notification = ['type' => 'success', 'message' => 'Utilisateur modifié avec succès !'];
+            } else {
+                $notification = ['type' => 'error', 'message' => 'Erreur lors de la modification de l\'utilisateur.'];
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'supprimer' && $id) {
+        $stmt = $auth->conn->prepare("DELETE FROM utilisateurs WHERE id=?");
+        $stmt->bind_param("i", $id);
+        if ($stmt->execute()) {
+            $notification = ['type' => 'success', 'message' => 'Utilisateur supprimé avec succès !'];
+        } else {
+            $notification = ['type' => 'error', 'message' => 'Erreur lors de la suppression de l\'utilisateur.'];
+        }
+        $stmt->close();
+    }
+
+}
+// --- Gestion POST types de paiement ---
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])
+    && in_array($_POST['action'], ['ajouterPaiement', 'modifierPaiement', 'supprimerPaiement'])
+) {
+
+    $action = $_POST['action'];
+
+    if ($action === 'ajouterPaiement') {
+        $nomType = trim($_POST['nom_type'] ?? '');
+        if ($nomType !== '') {
+            $stmt = $auth->conn->prepare("INSERT INTO payementtype (nom_type) VALUES (?)");
+            $stmt->bind_param("s", $nomType);
+            if ($stmt->execute()) {
+                $notification = ['type' => 'success', 'message' => 'Type de paiement ajouté avec succès !'];
+            } else {
+                $notification = ['type' => 'error', 'message' => 'Erreur lors de l\'ajout.'];
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'modifierPaiement') {
+        $id = intval($_POST['id'] ?? 0);
+        $nomType = trim($_POST['nom_type'] ?? '');
+        if ($id > 0 && $nomType !== '') {
+            $stmt = $auth->conn->prepare("UPDATE payementtype SET nom_type=? WHERE id=?");
+            $stmt->bind_param("si", $nomType, $id);
+            if ($stmt->execute()) {
+                $notification = ['type' => 'success', 'message' => 'Type de paiement modifié avec succès !'];
+            } else {
+                $notification = ['type' => 'error', 'message' => 'Erreur lors de la modification.'];
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'supprimerPaiement') {
+        $id = intval($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $stmt = $auth->conn->prepare("DELETE FROM payementtype WHERE id=?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
-                $notification = ['type' => 'success', 'message' => 'Utilisateur supprimé avec succès !'];
+                $notification = ['type' => 'success', 'message' => 'Type de paiement supprimé avec succès !'];
             } else {
-                $notification = ['type' => 'error', 'message' => 'Erreur lors de la suppression de l\'utilisateur.'];
+                $notification = ['type' => 'error', 'message' => 'Erreur lors de la suppression.'];
             }
             $stmt->close();
         }
     }
+}
 
-    // Récupérer utilisateurs pour affichage
-    $users = [];
-    if (!$dbError) {
-        $sqlUsers = "SELECT id, Names_User, Email, Role_User FROM utilisateurs ORDER BY id DESC";
-        $resultUsers = $auth->conn->query($sqlUsers);
-        if ($resultUsers && $resultUsers->num_rows > 0) {
-            while ($row = $resultUsers->fetch_assoc()) {
-                $users[] = $row;
-            }
+// Récupérer utilisateurs pour affichage
+$users = [];
+if (!$dbError) {
+    $sqlUsers = "SELECT id, Names_User, Email, Role_User FROM utilisateurs ORDER BY id DESC";
+    $resultUsers = $auth->conn->query($sqlUsers);
+    if ($resultUsers && $resultUsers->num_rows > 0) {
+        while ($row = $resultUsers->fetch_assoc()) {
+            $users[] = $row;
         }
     }
+}
 
 ?>
 <!DOCTYPE html>
@@ -192,8 +240,10 @@
             <span class="text-black">C.S.P.P</span><span class="text-indigo-500 font-extrabold">.UNILU</span>
         </div>
         <div class="flex items-center space-x-4">
-            <a href="mailto:administrationcsppunilu@gmail.com" class="text-sm font-medium text-gray-700 hover:text-indigo-600 transition duration-200">Aide</a>
-            <a href="/logoutAdmin" class="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-indigo-600 hover:to-blue-500 text-white font-semibold py-2 px-4 rounded-full text-sm">
+            <a href="mailto:administrationcsppunilu@gmail.com"
+                class="text-sm font-medium text-gray-700 hover:text-indigo-600 transition duration-200">Aide</a>
+            <a href="/logoutAdmin"
+                class="bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-indigo-600 hover:to-blue-500 text-white font-semibold py-2 px-4 rounded-full text-sm">
                 Se déconnecter
             </a>
         </div>
@@ -203,7 +253,8 @@
         <header class="flex items-center justify-between mb-8 bg-white p-6 rounded-xl shadow-lg">
             <h1 class="text-3xl font-extrabold text-gray-800">Tableau de bord de
                 l'Administrateur</h1>
-            <span class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2">
+            <span
+                class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2">
                 <i class="fas fa-shield-alt"></i>
                 <span>Espace Administrateur</span>
             </span>
@@ -213,7 +264,8 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-6">Actions rapides</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <a href="#" id="manageUsersBtn" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <a href="#" id="manageUsersBtn"
+                    class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
                     <div class="flex items-center">
                         <div class="bg-green-100 text-green-600 p-3 rounded-full mr-4">
                             <i class="fas fa-user-plus fa-lg"></i>
@@ -226,7 +278,8 @@
                     <i class="fas fa-chevron-right text-gray-400"></i>
                 </a>
 
-                <a id="paymentTypeLink" href="#" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
+                <a id="paymentTypeLink" href="#"
+                    class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-between">
                     <div class="flex items-center">
                         <div class="bg-blue-100 text-blue-600 p-3 rounded-full mr-4">
                             <i class="fas fa-cogs fa-lg"></i>
@@ -244,196 +297,327 @@
         <section id="dashboardContent" class="bg-white p-6 rounded-xl shadow-lg min-h-[50vh]">
 
             <?php if ($dbError): ?>
-            <div class="text-center text-red-500 py-10">
-                <i class="fas fa-exclamation-triangle fa-2x mb-4 text-red-400"></i>
-                <p class="text-lg"><?= htmlspecialchars($dbError) ?></p>
-                <p class="text-sm text-gray-500 mt-2">Veuillez vérifier les paramètres de votre
-                    base de données dans AuthController.php.</p>
-            </div>
+                <div class="text-center text-red-500 py-10">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-4 text-red-400"></i>
+                    <p class="text-lg"><?= htmlspecialchars($dbError) ?></p>
+                    <p class="text-sm text-gray-500 mt-2">Veuillez vérifier les paramètres de votre
+                        base de données dans AuthController.php.</p>
+                </div>
             <?php else: ?>
 
-            <div id="defaultMessage" class="text-center text-gray-500 py-10">
-                <i class="fas fa-info-circle fa-2x mb-4 text-gray-400"></i>
-                <p class="text-lg">Sélectionnez une option ci-dessus pour afficher les données.</p>
-            </div>
-
-            <div id="userManagement" class="flex flex-col lg:flex-row gap-8" style="display:none;">
-                <div class="lg:w-1/3">
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-indigo-700 text-center text-2xl font-bold mb-4">
-                            Gérer les utilisateurs
-                        </h3>
-                        <form id="userForm" method="POST" class="space-y-4">
-                            <input type="hidden" name="action" id="userAction" value="ajouter" />
-                            <input type="hidden" name="user_id" id="userId" value="" />
-
-                            <div>
-                                <label for="Names_User" class="block text-sm font-medium text-gray-700">Nom
-                                    complet
-                                    *</label>
-                                <input type="text" name="Names_User" id="Names_User" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Nom complet" />
-                            </div>
-                            <div>
-                                <label for="Email" class="block text-sm font-medium text-gray-700">Email
-                                    *</label>
-                                <input type="email" name="Email" id="Email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Email" />
-                            </div>
-                            <div>
-                                <label for="Role_User" class="block text-sm font-medium text-gray-700">Rôle
-                                    *</label>
-                                <select name="Role_User" id="Role_User" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                    <option value="Admin">Admin</option>
-                                    <option value="caissier">Caissier</option>
-                                    <option value="parent">Parent</option>
-                                    <option value="prefet">Préfet</option>
-                                    <option value="sec">Secrétaire</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="Password_User" class="block text-sm font-medium text-gray-700">Mot
-                                    de passe
-                                    *</label>
-                                <input type="password" name="Password_User" id="Password_User" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Mot de passe" />
-                            </div>
-                            <div>
-                                <label for="Confirm_Password" class="block text-sm font-medium text-gray-700">Confirmer
-                                    mot
-                                    de passe
-                                    *</label>
-                                <input type="password" name="Confirm_Password" id="Confirm_Password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Confirmer mot de passe" />
-                            </div>
-
-                            <div class="flex space-x-3 mt-4">
-                                <button type="submit" id="submitAdd" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition duration-200">Ajouter</button>
-                                <button type="button" id="btnModify" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 rounded-lg transition duration-200">Modifier</button>
-                                <button type="button" id="btnDelete" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition duration-200">Supprimer</button>
-                            </div>
-                        </form>
-                    </div>
+                <div id="defaultMessage" class="text-center text-gray-500 py-10">
+                    <i class="fas fa-info-circle fa-2x mb-4 text-gray-400"></i>
+                    <p class="text-lg">Sélectionnez une option ci-dessus pour afficher les données.</p>
                 </div>
 
-                <div class="lg:w-2/3">
-                    <div class="bg-white rounded-xl shadow-lg p-6 overflow-x-auto">
-                        <h4 class="text-xl font-semibold mb-4">Liste des utilisateurs</h4>
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Nom complet
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Email
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Rôle
-                                    </th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <?php if (count($users) > 0): ?>
-                                <?php foreach ($users as $user): ?>
-                                <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= htmlspecialchars($user['id']) ?>" data-name="<?= htmlspecialchars($user['Names_User']) ?>" data-email="<?= htmlspecialchars($user['Email']) ?>" data-role="<?= htmlspecialchars($user['Role_User']) ?>">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <?= htmlspecialchars($user['Names_User']) ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <?= htmlspecialchars($user['Email']) ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <?= htmlspecialchars($user['Role_User']) ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button class="editUserBtn text-indigo-600 hover:text-indigo-900 mr-4" title="Modifier">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="deleteUserBtn text-red-600 hover:text-red-900" title="Supprimer">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                <?php else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center text-sm text-gray-500 py-4">Aucun
-                                        utilisateur trouvé.</td>
-                                </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                <div id="userManagement" class="flex flex-col lg:flex-row gap-8" style="display:none;">
+                    <div class="lg:w-1/3">
+                        <div class="p-6 bg-white rounded-xl shadow-lg">
+                            <h3 class="text-green-700 text-center text-2xl font-bold mb-4">
+                                Gérer les utilisateurs
+                            </h3>
+                            <form id="userForm" method="POST" class="space-y-4">
+                                <input type="hidden" name="action" id="userAction" value="ajouter" />
+                                <input type="hidden" name="user_id" id="userId" value="" />
 
-            <div id="paymentFormContainer" class="flex flex-col lg:flex-row gap-8" style="display: none;">
-                <div class="lg:w-1/3">
-                    <div class="p-6 bg-white rounded-xl shadow-lg">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-6">Gérer les types de paiement</h3>
-                        <form id="paymentForm" class="space-y-4">
-                            <input type="hidden" id="paymentId" name="id" />
-                            <div>
-                                <label for="paymentTypeName" class="block text-sm font-medium text-gray-700">Nom du
-                                    type
-                                    de
-                                    paiement</label>
-                                <input type="text" id="paymentTypeName" name="nom_type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ex: Visa, MasterCard, Cash" />
-                            </div>
-                            <div class="flex justify-end space-x-2">
-                                <button type="button" id="paymentCancelBtn" class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400 text-gray-700 transition duration-200">Annuler</button>
-                                <button type="submit" id="paymentSubmitBtn" class="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition duration-200">Ajouter</button>
-                            </div>
-                        </form>
+                                <div>
+                                    <label for="Names_User" class="block text-sm font-medium text-gray-700">Nom
+                                        complet
+                                        <span class="text-green-700">*</span></label>
+                                    <input type="text" name="Names_User" id="Names_User" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Nom complet" />
+                                </div>
+                                <div>
+                                    <label for="Email" class="block text-sm font-medium text-gray-700">Email
+                                        <span class="text-green-700">*</span></label>
+                                    <input type="email" name="Email" id="Email" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Email" />
+                                </div>
+                                <div>
+                                    <label for="Role_User" class="block text-sm font-medium text-gray-700">Rôle
+                                        <span class="text-green-700">*</span></label>
+                                    <select name="Role_User" id="Role_User" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="Admin">Admin</option>
+                                        <option value="caissier">Caissier</option>
+                                        <option value="parent">Parent</option>
+                                        <option value="prefet">Préfet</option>
+                                        <option value="sec">Secrétaire</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="Password_User" class="block text-sm font-medium text-gray-700">Mot
+                                        de passe
+                                        <span class="text-green-700">*</span></label>
+                                    <input type="password" name="Password_User" id="Password_User" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Mot de passe" />
+                                </div>
+                                <div>
+                                    <label for="Confirm_Password" class="block text-sm font-medium text-gray-700">Confirmer
+                                        mot
+                                        de passe
+                                        <span class="text-green-700">*</span></label>
+                                    <input type="password" name="Confirm_Password" id="Confirm_Password" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Confirmer mot de passe" />
+                                </div>
+
+                                <div class="flex space-x-3 mt-4">
+                                    <button type="submit" id="submitAdd"
+                                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition duration-200">Ajouter</button>
+                                    <button type="button" id="btnModify"
+                                        class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 rounded-lg transition duration-200">Modifier</button>
+                                    <button type="button" id="btnDelete"
+                                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition duration-200">Supprimer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="lg:w-2/3">
+                        <div class="bg-white rounded-xl shadow-lg p-6 overflow-x-auto">
+                            <h4 class="text-xl font-semibold mb-4">Liste des utilisateurs</h4>
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Nom complet
+                                        </th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Email
+                                        </th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Rôle
+                                        </th>
+                                        <th
+                                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <?php if (count($users) > 0): ?>
+                                        <?php foreach ($users as $user): ?>
+                                            <tr class="hover:bg-gray-50 transition duration-150"
+                                                data-id="<?= htmlspecialchars($user['id']) ?>"
+                                                data-name="<?= htmlspecialchars($user['Names_User']) ?>"
+                                                data-email="<?= htmlspecialchars($user['Email']) ?>"
+                                                data-role="<?= htmlspecialchars($user['Role_User']) ?>">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    <?= htmlspecialchars($user['Names_User']) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                    <?= htmlspecialchars($user['Email']) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                    <?= htmlspecialchars($user['Role_User']) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button class="editUserBtn text-indigo-600 hover:text-indigo-900 mr-4"
+                                                        title="Modifier">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="deleteUserBtn text-red-600 hover:text-red-900" title="Supprimer">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center text-sm text-gray-500 py-4">Aucun
+                                                utilisateur trouvé.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                <div class="lg:w-2/3">
-                    <div class="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
-                        <h4 class="text-xl font-semibold mb-4">Liste des types de paiement</h4>
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Nom du type
-                                    </th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="paymentTableBody" class="bg-white divide-y divide-gray-200">
-                                <?php if ($paymentCount === 0): ?>
-                                <tr>
-                                    <td colspan="2" class="text-center text-sm text-gray-500 py-4">
-                                        Aucun type de paiement trouvé.
-                                    </td>
-                                </tr>
-                                <?php else: ?>
-                                <?php foreach ($paymentTypes as $ptype): ?>
-                                <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= $ptype['id'] ?>">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <?= htmlspecialchars($ptype['nom_type']) ?>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button class="editPaymentBtn text-indigo-600 hover:text-indigo-900 mr-4" title="Modifier">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="deletePaymentBtn text-red-600 hover:text-red-900" title="Supprimer">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                <div id="toastContainer" class="space-y-2 mb-4"></div>
+                <div id="paymentFormContainer" class="flex flex-col lg:flex-row gap-8" style="display: none;">
+                    <div class="lg:w-1/3">
+                        <div class="p-6 bg-white rounded-xl shadow-lg">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-6">Gérer les types de paiement</h3>
+
+                            <form id="paymentForm" class="space-y-4">
+                                <input type="hidden" id="paymentId" name="id" />
+                                <div>
+                                    <label for="paymentTypeName" class="block text-sm font-medium text-gray-700">Nom du
+                                        type
+                                        de
+                                        paiement</label>
+                                    <input type="text" id="paymentTypeName" name="nom_type" required
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Entrer un type de paiement" />
+                                </div>
+                                <div class="flex justify-end space-x-2">
+                                    <button type="button" id="paymentCancelBtn"
+                                        class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400 text-gray-700 transition duration-200">Annuler</button>
+                                    <button type="submit" id="paymentSubmitBtn"
+                                        class="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition duration-200">Ajouter</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:w-2/3">
+                        <div class="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
+                            <h4 class="text-xl font-semibold mb-4">Liste des types de paiement</h4>
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Nom du type
+                                        </th>
+                                        <th
+                                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentTableBody" class="bg-white divide-y divide-gray-200">
+                                    <?php if ($paymentCount === 0): ?>
+                                        <tr>
+                                            <td colspan="2" class="text-center text-sm text-gray-500 py-4">
+                                                Aucun type de paiement trouvé.
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($paymentTypes as $ptype): ?>
+                                            <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= $ptype['id'] ?>">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    <?= htmlspecialchars($ptype['nom_type']) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button class="editPaymentBtn text-indigo-600 hover:text-indigo-900 mr-4"
+                                                        title="Modifier">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="deletePaymentBtn text-red-600 hover:text-red-900"
+                                                        title="Supprimer">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <?php endif; ?>
         </section>
     </div>
+    <!-- Modal suppression paiement -->
+    <div id="deletePaymentModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-96 p-6 text-center">
+            <h2 class="text-xl font-semibold text-red-600 mb-3">⚠️ Suppression</h2>
+            <p class="text-gray-700 mb-6">Voulez-vous vraiment supprimer ce type de paiement ?</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancelDeletePayment"
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition">
+                    Annuler
+                </button>
+                <button id="confirmDeletePayment"
+                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition">
+                    Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let paymentIdToDelete = null;
+
+        document.querySelectorAll('.deletePaymentBtn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                const tr = e.target.closest('tr');
+                paymentIdToDelete = tr.dataset.id;
+                document.getElementById('deletePaymentModal').classList.remove('hidden');
+            });
+        });
+
+        // Annuler
+        document.getElementById('cancelDeletePayment').addEventListener('click', () => {
+            document.getElementById('deletePaymentModal').classList.add('hidden');
+            paymentIdToDelete = null;
+        });
+
+        // Confirmer suppression
+        document.getElementById('confirmDeletePayment').addEventListener('click', () => {
+            if (paymentIdToDelete) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = ''; // 🔹 tu mets ton endpoint ici
+                form.classList.add('hidden');
+
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'supprimerPaiement';
+
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = paymentIdToDelete;
+
+                form.appendChild(actionInput);
+                form.appendChild(idInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+            document.getElementById('deletePaymentModal').classList.add('hidden');
+        });
+
+    </script>
+    <!-- Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-96 p-6 text-center">
+            <h2 class="text-xl font-semibold text-red-600 mb-4">⚠️ Confirmation</h2>
+            <p class="text-gray-700 mb-6">Voulez-vous vraiment supprimer cet utilisateur ?</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancelDelete"
+                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">Annuler</button>
+                <button id="confirmDelete"
+                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let trToDelete = null;
+
+        document.querySelectorAll('.deleteUserBtn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                trToDelete = e.target.closest('tr');
+                document.getElementById('deleteModal').classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            document.getElementById('deleteModal').classList.add('hidden');
+            trToDelete = null;
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', () => {
+            if (trToDelete) {
+                userId.value = trToDelete.dataset.id;
+                userAction.value = 'supprimer';
+                userForm.submit();
+            }
+            document.getElementById('deleteModal').classList.add('hidden');
+        });
+    </script>
+
 
     <script>
         // Variables pour éléments
@@ -533,16 +717,6 @@
             });
         });
 
-        // Supprimer utilisateur via tableau
-        document.querySelectorAll('.deleteUserBtn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                if (!confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) return;
-                const tr = e.target.closest('tr');
-                userId.value = tr.dataset.id;
-                userAction.value = 'supprimer';
-                userForm.submit();
-            });
-        });
 
         // --- Gestion formulaire paiement ---
         const paymentForm = document.getElementById('paymentForm');
@@ -570,29 +744,6 @@
             });
         });
 
-        // Supprimer paiement
-        document.querySelectorAll('.deletePaymentBtn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                if (!confirm("Voulez-vous vraiment supprimer ce type de paiement ?")) return;
-                const tr = e.target.closest('tr');
-                const id = tr.dataset.id;
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '';
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'action';
-                actionInput.value = 'supprimerPaiement';
-                const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'id';
-                idInput.value = id;
-                form.appendChild(actionInput);
-                form.appendChild(idInput);
-                document.body.appendChild(form);
-                form.submit();
-            });
-        });
 
         // Annuler modification paiement
         paymentCancelBtn.addEventListener('click', (e) => {
@@ -614,7 +765,7 @@
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '';
-            
+
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
@@ -624,7 +775,7 @@
             nomTypeInput.type = 'hidden';
             nomTypeInput.name = 'nom_type';
             nomTypeInput.value = nom_type;
-            
+
             form.appendChild(actionInput);
             form.appendChild(nomTypeInput);
 
@@ -635,7 +786,7 @@
                 idInput.value = id;
                 form.appendChild(idInput);
             }
-            
+
             document.body.appendChild(form);
             form.submit();
         });
@@ -645,30 +796,52 @@
 
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
-            toast.className = `flex items-center w-full max-w-xs p-4 rounded-lg shadow-md animate-slide-in
-                               ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            toast.className = `
+        flex items-center w-full max-w-lg p-4 rounded-xl shadow-md border
+        transform scale-95 opacity-0 transition-all duration-300 ease-in-out
+        ${type === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-700'
+                    : 'bg-red-50 border-red-200 text-red-700'}
+    `;
             toast.role = 'alert';
-            
-            const icon = type === 'success' ? '<i class="fas fa-check-circle mr-2 text-green-500"></i>' : '<i class="fas fa-times-circle mr-2 text-red-500"></i>';
-            
+
+            const icon = type === 'success'
+                ? '<i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>'
+                : '<i class="fas fa-times-circle text-red-500 text-xl mr-3"></i>';
+
             toast.innerHTML = `
-                ${icon}
-                <div class="text-sm font-normal flex-grow">${message}</div>
-                <button type="button" class="ml-auto -mx-1.5 -my-1.5 bg-transparent rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8 text-gray-400 hover:text-gray-900 hover:bg-gray-200" aria-label="Close">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            
-            toastContainer.appendChild(toast);
+        ${icon}
+        <div class="text-sm font-medium flex-grow">${message}</div>
+        <button type="button" 
+            class="ml-3 bg-transparent rounded-lg p-1.5 inline-flex items-center justify-center 
+                   text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition" 
+            aria-label="Close">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
 
-            toast.querySelector('button').addEventListener('click', () => {
-                hideToast(toast);
-            });
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
 
+            // Animation apparition
             setTimeout(() => {
-                hideToast(toast);
-            }, 5000);
+                toast.classList.remove("scale-95", "opacity-0");
+                toast.classList.add("scale-100", "opacity-100");
+            }, 100);
+
+            // Bouton fermer
+            toast.querySelector('button').addEventListener('click', () => hideToast(toast));
+
+            // Auto hide
+            setTimeout(() => hideToast(toast), 5000);
         }
+
+        function hideToast(toast) {
+            toast.classList.remove("scale-100", "opacity-100");
+            toast.classList.add("scale-95", "opacity-0");
+            setTimeout(() => toast.remove(), 300);
+        }
+
 
         function hideToast(toast) {
             toast.classList.remove('animate-slide-in');

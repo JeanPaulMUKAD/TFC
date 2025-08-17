@@ -45,6 +45,7 @@ class AuthController
                 if ($row['Role_User'] === 'caissier') {
                     header("Location: Dashboad.php");
                 } elseif ($row['Role_User'] === 'parent') {
+                    $_SESSION['parent_id'] = $row['id'];
                     header("Location: ./assets/Parent/Acceuil_Parent.php");
 
                 } elseif ($row['Role_User'] === 'prefet') {
@@ -1232,6 +1233,27 @@ class AuthController
             return ['success' => false, 'message' => "Erreur imprévue : " . $e->getMessage()];
         }
     }
+
+    public function obtenirEnfantsParIdParent($idParent)
+    {
+        $stmt = $this->conn->prepare("
+        SELECT matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, adresse_eleve, annee_inscription
+        FROM inscriptions
+        WHERE parent_id = ?
+    ");
+        $stmt->bind_param("i", $idParent);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $enfants = [];
+        while ($row = $result->fetch_assoc()) {
+            $enfants[] = $row;
+        }
+
+        return ['success' => true, 'enfants' => $enfants];
+    }
+
+
 
 
 
