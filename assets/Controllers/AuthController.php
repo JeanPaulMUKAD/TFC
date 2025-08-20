@@ -953,6 +953,7 @@ class AuthController
         }
 
         $query = "SELECT
+            p.id AS id_paiement,  -- Utilisez l'ID de la table paiements et renommez-le
             i.matricule,
             p.montant_payer,
             p.motif_paiement,
@@ -971,7 +972,7 @@ class AuthController
         JOIN
             " . $this->parents_table . " u ON i.parent_id = u.id 
         WHERE
-            u.Names_User = ?";
+            u.Email = ?";
 
         $stmt = $this->conn->prepare($query);
 

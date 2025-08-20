@@ -9,6 +9,8 @@
         $names = $_POST['Email'];
         $password = $_POST['Password_User'];
         $message = $auth->login($names, $password);
+    }else {
+        $message = "Veuillez remplir tous les champs.";
     }
 ?>
 
