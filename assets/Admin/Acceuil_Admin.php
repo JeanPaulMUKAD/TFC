@@ -92,57 +92,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
 
 }
 // --- Gestion POST types de paiement ---
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])
-    && in_array($_POST['action'], ['ajouterPaiement', 'modifierPaiement', 'supprimerPaiement'])
-) {
-
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
 
-    if ($action === 'ajouterPaiement') {
-        $nomType = trim($_POST['nom_type'] ?? '');
-        if ($nomType !== '') {
-            $stmt = $auth->conn->prepare("INSERT INTO payementtype (nom_type) VALUES (?)");
-            $stmt->bind_param("s", $nomType);
-            if ($stmt->execute()) {
-                $notification = ['type' => 'success', 'message' => 'Type de paiement ajouté avec succès !'];
-            } else {
-                $notification = ['type' => 'error', 'message' => 'Erreur lors de l\'ajout.'];
-            }
-            $stmt->close();
-        }
-    } elseif ($action === 'modifierPaiement') {
-        $id = intval($_POST['id'] ?? 0);
-        $nomType = trim($_POST['nom_type'] ?? '');
-        if ($id > 0 && $nomType !== '') {
-            $stmt = $auth->conn->prepare("UPDATE payementtype SET nom_type=? WHERE id=?");
-            $stmt->bind_param("si", $nomType, $id);
-            if ($stmt->execute()) {
-                $notification = ['type' => 'success', 'message' => 'Type de paiement modifié avec succès !'];
-            } else {
-                $notification = ['type' => 'error', 'message' => 'Erreur lors de la modification.'];
-            }
-            $stmt->close();
-        }
-    } elseif ($action === 'supprimerPaiement') {
-        $id = intval($_POST['id'] ?? 0);
-        if ($id > 0) {
-            $stmt = $auth->conn->prepare("DELETE FROM payementtype WHERE id=?");
-            $stmt->bind_param("i", $id);
-            if ($stmt->execute()) {
-                $notification = ['type' => 'success', 'message' => 'Type de paiement supprimé avec succès !'];
-            } else {
-                $notification = ['type' => 'error', 'message' => 'Erreur lors de la suppression.'];
-            }
-            $stmt->close();
-        }
+    // Récupération sécurisée des valeurs
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    $nomType = trim($_POST['nom_type'] ?? '');
+    $classeType = trim($_POST['classe_type'] ?? '');
+    $montantClasse = isset($_POST['montant_classe']) ? (float) $_POST['montant_classe'] : 0.0;
+    $mois = trim($_POST['mois'] ?? '');
+
+    if ($action === 'ajouterPaiement' && $nomType && $classeType && $montantClasse > 0 && $mois) {
+        $stmt = $auth->conn->prepare("INSERT INTO payementtype (nom_type, classe_type, montant_classe, mois) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssds", $nomType, $classeType, $montantClasse, $mois);
+        $notification = $stmt->execute()
+            ? ['type' => 'success', 'message' => 'Type de paiement ajouté avec succès !']
+            : ['type' => 'error', 'message' => 'Erreur lors de l\'ajout.'];
+        $stmt->close();
+    } elseif ($action === 'modifierPaiement' && $id > 0 && $nomType && $classeType && $montantClasse > 0 && $mois) {
+        $stmt = $auth->conn->prepare("UPDATE payementtype SET nom_type=?, classe_type=?, montant_classe=?, mois=? WHERE id=?");
+        $stmt->bind_param("ssdsi", $nomType, $classeType, $montantClasse, $mois, $id);
+        $notification = $stmt->execute()
+            ? ['type' => 'success', 'message' => 'Type de paiement modifié avec succès !']
+            : ['type' => 'error', 'message' => 'Erreur lors de la modification.'];
+        $stmt->close();
+    } elseif ($action === 'supprimerPaiement' && $id > 0) {
+        $stmt = $auth->conn->prepare("DELETE FROM payementtype WHERE id=?");
+        $stmt->bind_param("i", $id);
+        $notification = $stmt->execute()
+            ? ['type' => 'success', 'message' => 'Type de paiement supprimé avec succès !']
+            : ['type' => 'error', 'message' => 'Erreur lors de la suppression.'];
+        $stmt->close();
     }
 }
+
+// --- Récupération de tous les types de paiement pour affichage ---
+$paymentTypes = $auth->conn->query("SELECT * FROM payementtype ORDER BY id ASC")->fetch_all(MYSQLI_ASSOC);
+$paymentCount = count($paymentTypes);
+
 
 // Récupérer utilisateurs pour affichage
 $users = [];
 if (!$dbError) {
-    $sqlUsers = "SELECT id, Names_User, Email, Role_User FROM utilisateurs ORDER BY id DESC";
+    $sqlUsers = "SELECT id, Names_User, Email, Role_User FROM utilisateurs ORDER BY id ASC";
     $resultUsers = $auth->conn->query($sqlUsers);
     if ($resultUsers && $resultUsers->num_rows > 0) {
         while ($row = $resultUsers->fetch_assoc()) {
@@ -457,6 +449,87 @@ if (!$dbError) {
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                         placeholder="Entrer un type de paiement" />
                                 </div>
+                                <div>
+                                    <label for="classeType" class="block text-sm font-medium text-gray-700">
+                                        Classe concernée
+                                    </label>
+                                    <select id="classeType" name="classe_type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                   focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="">-- Sélectionner une classe --</option>
+                                        <option value="7e EB">7e EB</option>
+                                        <option value="8e EB">8e EB</option>
+                                        <option value="1ere SC">1ère SC</option>
+                                        <option value="1ere CG">1ère CG</option>
+                                        <option value="1ere HP">1ère HP</option>
+                                        <option value="1ere MG">1ère MG</option>
+                                        <option value="1ere ELECT">1ère ELECT</option>
+                                        <option value="2ere SC">2ère SC</option>
+                                        <option value="2ere CG">2ère CG</option>
+                                        <option value="2ere HP">2ère HP</option>
+                                        <option value="2ere MG">2ère MG</option>
+                                        <option value="2ere ELECT">2ère ELECT</option>
+                                        <option value="2eme TCC">2ème TCC</option>
+                                        <option value="3ere SC">3ère SC</option>
+                                        <option value="3ere CG">3ère CG</option>
+                                        <option value="3ere HP">3ère HP</option>
+                                        <option value="3ere MG">3ère MG</option>
+                                        <option value="3ere ELECT">3ère ELECT</option>
+                                        <option value="3eme TCC">3ème TCC</option>
+                                        <option value="4ere SC">4ère SC</option>
+                                        <option value="4ere CG">4ère CG</option>
+                                        <option value="4ere HP">4ère HP</option>
+                                        <option value="4ere MG">4ère MG</option>
+                                        <option value="4ere ELECT">4ère ELECT</option>
+                                        <option value="4eme TCC">4ème TCC</option>
+                                    </select>
+                                </div>
+                                <!-- Montant -->
+                                <div>
+                                    <label for="montantClasse" class="block text-sm font-medium text-gray-700">
+                                        Montant (CDF)
+                                    </label>
+                                    <input type="text" id="montantClasse" name="montant_classe" required min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                   focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                        placeholder="Entrer le montant" />
+                                </div>
+                                <!-- Mois -->
+                                <div>
+                                    <label for="mois" class="block text-sm font-medium text-gray-700">
+                                        Mois de paiement
+                                    </label>
+                                    <select id="mois" name="mois" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+                   focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="">-- Sélectionner un mois --</option>
+                                        <option value="Séptembre">Séptembre</option>
+                                        <option value="Octobre">Octobre</option>
+                                        <option value="Novembre">Novembre</option>
+                                        <option value="Décembre">Décembre</option>
+                                        <option value="Janvier">Janvier</option>
+                                        <option value="Février">Février</option>
+                                        <option value="Mars">Mars</option>
+                                        <option value="Août">Avril</option>
+                                        <option value="Avril">Mai</option>
+                                        <option value="Juin">Juin</option>
+                                        <option value="all">Tous les mois</option>
+                                    </select>
+                                </div>
+                                <script>
+                                    document.getElementById('paymentForm').addEventListener('submit', function (e) {
+                                        const moisSelect = document.getElementById('mois');
+                                        const montantInput = document.getElementById('montantClasse'); // Assure-toi que ton input montant a cet id
+                                        const selectedMois = moisSelect.value;
+                                        let montant = parseFloat(montantInput.value);
+
+                                        if (selectedMois === 'all') {
+                                            // Multiplier par 10 si "Tous les mois" est sélectionné
+                                            montant = montant * 10;
+                                            montantInput.value = montant.toFixed(2); // Met à jour le champ montant
+                                        }
+
+                                        // Le formulaire continue son envoi normal
+                                    });
+                                </script>
+
                                 <div class="flex justify-end space-x-2">
                                     <button type="button" id="paymentCancelBtn"
                                         class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400 text-gray-700 transition duration-200">Annuler</button>
@@ -466,6 +539,7 @@ if (!$dbError) {
                             </form>
                         </div>
                     </div>
+                    <!-- Tableau des types de paiement -->
                     <div class="lg:w-2/3">
                         <div class="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
                             <h4 class="text-xl font-semibold mb-4">Liste des types de paiement</h4>
@@ -474,26 +548,49 @@ if (!$dbError) {
                                     <tr>
                                         <th
                                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nom du type
-                                        </th>
+                                            Nom du type</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Classe</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Montant</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Mois</th>
                                         <th
                                             class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Actions
-                                        </th>
+                                            Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="paymentTableBody" class="bg-white divide-y divide-gray-200">
                                     <?php if ($paymentCount === 0): ?>
                                         <tr>
-                                            <td colspan="2" class="text-center text-sm text-gray-500 py-4">
-                                                Aucun type de paiement trouvé.
-                                            </td>
+                                            <td colspan="5" class="text-center text-sm text-gray-500 py-4">Aucun type de
+                                                paiement trouvé.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($paymentTypes as $ptype): ?>
-                                            <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= $ptype['id'] ?>">
+                                            <?php
+                                            $nomType = $ptype['nom_type'] ?? '';
+                                            $classeType = $ptype['classe_type'] ?? '';
+                                            $montant = isset($ptype['montant_classe']) ? number_format($ptype['montant_classe'], 2, ',', '.') : '0,00';
+                                            $mois = $ptype['mois'] ?? 'Mensuel';
+                                            ?>
+                                            <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= $ptype['id'] ?? 0 ?>">
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    <?= htmlspecialchars($ptype['nom_type']) ?>
+                                                    <?= htmlspecialchars($nomType) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <?= htmlspecialchars($classeType) ?>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <?= $montant ?> FC
+                                                    <span
+                                                        class="text-xs text-gray-500">(<?= $mois === 'all' ? 'Annuel' : 'Mensuel' ?>)</span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <?= htmlspecialchars($mois) ?>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <button class="editPaymentBtn text-indigo-600 hover:text-indigo-900 mr-4"
@@ -512,6 +609,7 @@ if (!$dbError) {
                             </table>
                         </div>
                     </div>
+
                 </div>
 
             <?php endif; ?>
@@ -735,14 +833,28 @@ if (!$dbError) {
 
         // Éditer paiement
         document.querySelectorAll('.editPaymentBtn').forEach(btn => {
-            btn.addEventListener('click', e => {
-                const tr = e.target.closest('tr');
-                paymentIdInput.value = tr.dataset.id;
-                paymentNameInput.value = tr.querySelector('td').textContent.trim();
-                paymentSubmitBtn.textContent = 'Modifier';
-                paymentNameInput.focus();
-            });
-        });
+    btn.addEventListener('click', e => {
+        const tr = e.target.closest('tr');
+
+        // Récupérer les données du tr via data-* ou td
+        const id = tr.dataset.id;
+        const nomType = tr.querySelector('td:nth-child(1)').textContent.trim();
+        const classeType = tr.querySelector('td:nth-child(2)').textContent.trim();
+        const montantClasse = tr.querySelector('td:nth-child(3)').textContent.trim().split(' ')[0].replace(',', '.'); // retirer FC
+        const mois = tr.querySelector('td:nth-child(4)').textContent.trim();
+
+        // Remplir le formulaire
+        document.getElementById('paymentId').value = id;
+        document.getElementById('paymentTypeName').value = nomType;
+        document.getElementById('classeType').value = classeType;
+        document.getElementById('montantClasse').value = montantClasse;
+        document.getElementById('mois').value = mois;
+
+        // Modifier le bouton
+        document.getElementById('paymentSubmitBtn').textContent = 'Modifier';
+        document.getElementById('paymentTypeName').focus();
+    });
+});
 
 
         // Annuler modification paiement
@@ -754,31 +866,36 @@ if (!$dbError) {
         // Soumettre formulaire paiement (ajouter/modifier)
         paymentForm.addEventListener('submit', (e) => {
             e.preventDefault();
+
             const id = paymentIdInput.value;
             const nom_type = paymentNameInput.value.trim();
+
             if (!nom_type) {
                 alert("Veuillez entrer un nom de type de paiement.");
                 return;
             }
+
             const action = id ? 'modifierPaiement' : 'ajouterPaiement';
 
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '';
 
+            // Action
             const actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
             actionInput.value = action;
+            form.appendChild(actionInput);
 
+            // Nom type
             const nomTypeInput = document.createElement('input');
             nomTypeInput.type = 'hidden';
             nomTypeInput.name = 'nom_type';
             nomTypeInput.value = nom_type;
-
-            form.appendChild(actionInput);
             form.appendChild(nomTypeInput);
 
+            // ID si modification
             if (id) {
                 const idInput = document.createElement('input');
                 idInput.type = 'hidden';
@@ -787,22 +904,45 @@ if (!$dbError) {
                 form.appendChild(idInput);
             }
 
+            // --- Champs supplémentaires ---
+            const classeType = document.getElementById('classeType').value;
+            const montantClasse = document.getElementById('montantClasse').value;
+            const mois = document.getElementById('mois').value;
+
+            const classeInput = document.createElement('input');
+            classeInput.type = 'hidden';
+            classeInput.name = 'classe_type';
+            classeInput.value = classeType;
+
+            const montantInput = document.createElement('input');
+            montantInput.type = 'hidden';
+            montantInput.name = 'montant_classe';
+            montantInput.value = montantClasse;
+
+            const moisInput = document.createElement('input');
+            moisInput.type = 'hidden';
+            moisInput.name = 'mois';
+            moisInput.value = mois;
+
+            form.appendChild(classeInput);
+            form.appendChild(montantInput);
+            form.appendChild(moisInput);
+
+            // Soumettre
             document.body.appendChild(form);
             form.submit();
         });
 
         // --- Fonctionnalité Toast Messages ---
-        const toastContainer = document.getElementById('toast-container');
-
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `
-        flex items-center w-full max-w-lg p-4 rounded-xl shadow-md border
-        transform scale-95 opacity-0 transition-all duration-300 ease-in-out
-        ${type === 'success'
+            flex items-center w-full max-w-lg p-4 rounded-xl shadow-md border
+            transform scale-95 opacity-0 transition-all duration-300 ease-in-out
+            ${type === 'success'
                     ? 'bg-green-50 border-green-200 text-green-700'
                     : 'bg-red-50 border-red-200 text-red-700'}
-    `;
+        `;
             toast.role = 'alert';
 
             const icon = type === 'success'
@@ -810,15 +950,15 @@ if (!$dbError) {
                 : '<i class="fas fa-times-circle text-red-500 text-xl mr-3"></i>';
 
             toast.innerHTML = `
-        ${icon}
-        <div class="text-sm font-medium flex-grow">${message}</div>
-        <button type="button" 
-            class="ml-3 bg-transparent rounded-lg p-1.5 inline-flex items-center justify-center 
-                   text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition" 
-            aria-label="Close">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
+            ${icon}
+            <div class="text-sm font-medium flex-grow">${message}</div>
+            <button type="button" 
+                class="ml-3 bg-transparent rounded-lg p-1.5 inline-flex items-center justify-center 
+                       text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition" 
+                aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
 
             const container = document.getElementById('toastContainer');
             container.appendChild(toast);
@@ -842,25 +982,15 @@ if (!$dbError) {
             setTimeout(() => toast.remove(), 300);
         }
 
-
-        function hideToast(toast) {
-            toast.classList.remove('animate-slide-in');
-            toast.classList.add('animate-slide-out');
-            setTimeout(() => {
-                toast.remove();
-            }, 500);
-        }
-
         // Vérifier si une notification PHP existe
         <?php if ($notification): ?>
             document.addEventListener('DOMContentLoaded', () => {
                 showToast('<?= htmlspecialchars($notification['message']) ?>', '<?= htmlspecialchars($notification['type']) ?>');
-                // Supprimer la notification de la session pour ne pas la réafficher
                 <?php unset($_SESSION['notification']); ?>
             });
         <?php endif; ?>
-
     </script>
+
 
 
     <!--SEARCH LOGO-->

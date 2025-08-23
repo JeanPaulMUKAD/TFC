@@ -102,8 +102,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             let transactionId = Math.floor(Math.random() * 100000000).toString();
             CinetPay.setConfig({
-                apikey: '137270109768837fd94f8549.16939776',
-                site_id: '105903173',
+                apikey: '75056871567c071de82e830.17896805',
+                site_id: '105899604',
                 notify_url: 'http://localhost:8080/assets/Parent/PaiementParent.php',
                 mode: 'PRODUCTION'
             });
@@ -285,7 +285,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label for="nom_parent" class="form-label">Nom du Parent <span
+                                                    <label for="nom_parent" class="form-label">Email du Parent <span
                                                             class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="nom_parent"
                                                         name="nom_parent" placeholder="Nom du parent" required
