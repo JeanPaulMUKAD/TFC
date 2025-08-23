@@ -1235,10 +1235,13 @@ class AuthController
         }
     }
 
+
     public function obtenirEnfantsParIdParent($idParent)
     {
+        // Récupérer uniquement les informations des élèves
         $stmt = $this->conn->prepare("
-        SELECT matricule, nom_eleve, postnom_eleve, prenom_eleve, sexe_eleve, classe_selection, adresse_eleve, annee_inscription
+        SELECT id, matricule, nom_eleve, postnom_eleve, prenom_eleve,
+               sexe_eleve, nom_parent, classe_selection, adresse_eleve, annee_inscription
         FROM inscriptions
         WHERE parent_id = ?
     ");
@@ -1248,6 +1251,9 @@ class AuthController
 
         $enfants = [];
         while ($row = $result->fetch_assoc()) {
+            // Initialiser le total annuel à 0, sera calculé selon le type de paiement sélectionné
+            $row['total_annuel'] = number_format(0, 2, ',', '.');
+            $row['mois_affichage'] = ''; // Champ à remplir lors de la sélection d’un type de paiement
             $enfants[] = $row;
         }
 

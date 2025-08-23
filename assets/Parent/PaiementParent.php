@@ -324,7 +324,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                     <select class="form-select" id="devise" name="devise" required>
                                                         <option value="">Sélectionnez la devise</option>
                                                         <option value="FC" selected>FC</option>
-                                                        <option value="$">$</option>
                                                     </select>
                                                     <div class="invalid-feedback">
                                                         Veuillez sélectionner la devise.
@@ -335,7 +334,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         paiement <span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="motif_paiement"
                                                         name="motif_paiement" placeholder="Ex: Frais Scolaire" required
-                                                        value="<?php echo htmlspecialchars($motif_paiement_prefill ?? ''); ?>"
+                                                        value="<?php echo html_entity_decode(htmlspecialchars($motif_paiement_prefill ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
                                                         readonly>
                                                     <div class="invalid-feedback">
                                                         Veuillez entrer le motif du paiement.
@@ -374,6 +373,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script>
         // Fonction pour pré-remplir les champs si des paramètres GET sont présents
+        // Votre fonction existante pour pré-remplir
         document.addEventListener('DOMContentLoaded', function () {
             const urlParams = new URLSearchParams(window.location.search);
 
@@ -382,26 +382,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 document.getElementById('nom_eleve').value = urlParams.get('nom_eleve');
                 document.getElementById('postnom_eleve').value = urlParams.get('postnom_eleve');
                 document.getElementById('prenom_eleve').value = urlParams.get('prenom_eleve');
+
                 // Gérer le select pour le sexe
                 const sexeSelect = document.getElementById('sexe_eleve');
                 const sexeValue = urlParams.get('sexe_eleve');
                 if (sexeValue) {
                     sexeSelect.value = sexeValue;
                 }
+
                 document.getElementById('classe_eleve').value = urlParams.get('classe_eleve');
                 document.getElementById('nom_parent').value = urlParams.get('nom_parent');
-                document.getElementById('adresse_eleve').value = urlParams.get('adresse_eleve') || ''; // L'adresse n'est pas toujours passée
+                document.getElementById('adresse_eleve').value = urlParams.get('adresse_eleve') || '';
 
+                // *** Mise à jour de cette partie pour le montant et le motif ***
                 const montantDu = urlParams.get('montant_du');
                 if (montantDu) {
                     document.getElementById('montant_payer').value = parseFloat(montantDu).toFixed(2);
                 }
-                // Si vous avez besoin de total_annuel ici pour CinetPay, assurez-vous de le passer aussi via l'URL
                 document.getElementById('total_annuel').value = urlParams.get('total_annuel') || '';
+                document.getElementById('motif_paiement').value = urlParams.get('motif_paiement') || '';
 
                 // Désactiver la recherche par matricule si les infos sont déjà là
                 document.getElementById('matricule').removeEventListener('blur', chercherEleveParMatricule);
             }
+        });
         });
 
         // Gardez la fonction chercherEleveParMatricule pour les cas où le formulaire n'est pas pré-rempli

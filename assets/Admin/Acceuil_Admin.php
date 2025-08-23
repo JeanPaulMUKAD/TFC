@@ -510,7 +510,7 @@ if (!$dbError) {
                                         <option value="Août">Avril</option>
                                         <option value="Avril">Mai</option>
                                         <option value="Juin">Juin</option>
-                                        <option value="all">Tous les mois</option>
+                                        <option value="Annuel">Tous les mois</option>
                                     </select>
                                 </div>
                                 <script>
@@ -520,7 +520,7 @@ if (!$dbError) {
                                         const selectedMois = moisSelect.value;
                                         let montant = parseFloat(montantInput.value);
 
-                                        if (selectedMois === 'all') {
+                                        if (selectedMois === 'Annuel') {
                                             // Multiplier par 10 si "Tous les mois" est sélectionné
                                             montant = montant * 10;
                                             montantInput.value = montant.toFixed(2); // Met à jour le champ montant
@@ -557,7 +557,7 @@ if (!$dbError) {
                                             Montant</th>
                                         <th
                                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Mois</th>
+                                            Motif</th>
                                         <th
                                             class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Actions</th>
@@ -574,7 +574,7 @@ if (!$dbError) {
                                             <?php
                                             $nomType = $ptype['nom_type'] ?? '';
                                             $classeType = $ptype['classe_type'] ?? '';
-                                            $montant = isset($ptype['montant_classe']) ? number_format($ptype['montant_classe'], 2, ',', '.') : '0,00';
+                                            $montant = isset($ptype['montant_classe']) ? $ptype['montant_classe'] : 0;
                                             $mois = $ptype['mois'] ?? 'Mensuel';
                                             ?>
                                             <tr class="hover:bg-gray-50 transition duration-150" data-id="<?= $ptype['id'] ?? 0 ?>">
@@ -587,7 +587,7 @@ if (!$dbError) {
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                     <?= $montant ?> FC
                                                     <span
-                                                        class="text-xs text-gray-500">(<?= $mois === 'all' ? 'Annuel' : 'Mensuel' ?>)</span>
+                                                        class="text-xs text-gray-500">(<?= $mois === 'Annuel' ? 'Annuel' : 'Mensuel' ?>)</span>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                     <?= htmlspecialchars($mois) ?>
@@ -833,28 +833,28 @@ if (!$dbError) {
 
         // Éditer paiement
         document.querySelectorAll('.editPaymentBtn').forEach(btn => {
-    btn.addEventListener('click', e => {
-        const tr = e.target.closest('tr');
+            btn.addEventListener('click', e => {
+                const tr = e.target.closest('tr');
 
-        // Récupérer les données du tr via data-* ou td
-        const id = tr.dataset.id;
-        const nomType = tr.querySelector('td:nth-child(1)').textContent.trim();
-        const classeType = tr.querySelector('td:nth-child(2)').textContent.trim();
-        const montantClasse = tr.querySelector('td:nth-child(3)').textContent.trim().split(' ')[0].replace(',', '.'); // retirer FC
-        const mois = tr.querySelector('td:nth-child(4)').textContent.trim();
+                // Récupérer les données du tr via data-* ou td
+                const id = tr.dataset.id;
+                const nomType = tr.querySelector('td:nth-child(1)').textContent.trim();
+                const classeType = tr.querySelector('td:nth-child(2)').textContent.trim();
+                const montantClasse = tr.querySelector('td:nth-child(3)').textContent.trim().split(' ')[0].replace(',', '.'); // retirer FC
+                const mois = tr.querySelector('td:nth-child(4)').textContent.trim();
 
-        // Remplir le formulaire
-        document.getElementById('paymentId').value = id;
-        document.getElementById('paymentTypeName').value = nomType;
-        document.getElementById('classeType').value = classeType;
-        document.getElementById('montantClasse').value = montantClasse;
-        document.getElementById('mois').value = mois;
+                // Remplir le formulaire
+                document.getElementById('paymentId').value = id;
+                document.getElementById('paymentTypeName').value = nomType;
+                document.getElementById('classeType').value = classeType;
+                document.getElementById('montantClasse').value = montantClasse;
+                document.getElementById('mois').value = mois;
 
-        // Modifier le bouton
-        document.getElementById('paymentSubmitBtn').textContent = 'Modifier';
-        document.getElementById('paymentTypeName').focus();
-    });
-});
+                // Modifier le bouton
+                document.getElementById('paymentSubmitBtn').textContent = 'Modifier';
+                document.getElementById('paymentTypeName').focus();
+            });
+        });
 
 
         // Annuler modification paiement
