@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'get_paiements_by_parent':
-            if ($loggedInParentId) { // Assure-toi que l'ID du parent est en session
+            if ($loggedInParentId) { // ID parent en session
                 $stmt = $auth->conn->prepare("
             SELECT 
                 p.id AS id_paiement,
@@ -136,8 +136,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($result) {
                         $paiements = $result->fetch_all(MYSQLI_ASSOC);
+
                         if (!empty($paiements)) {
-                            $resultat = ['success' => true, 'paiements' => $paiements];
+                            $paiementsRegroupes = [];
+
+                            foreach ($paiements as $paiement) {
+                                $key = $paiement['matricule'] . '_' . $paiement['motif_paiement'];
+
+                                if (!isset($paiementsRegroupes[$key])) {
+                                    $paiementsRegroupes[$key] = $paiement;
+                                    $paiementsRegroupes[$key]['montant_payer'] = (float) $paiement['montant_payer'];
+                                } else {
+                                    $paiementsRegroupes[$key]['montant_payer'] += (float) $paiement['montant_payer'];
+                                }
+                            }
+
+                            $resultat = [
+                                'success' => true,
+                                'paiements' => array_values($paiementsRegroupes)
+                            ];
                         } else {
                             $resultat = ['success' => false, 'message' => 'Aucun historique de paiement trouvé pour les enfants de ce parent.'];
                         }
@@ -151,6 +168,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $resultat = ['success' => false, 'message' => 'ID du parent non disponible en session.'];
             }
             break;
+
+
 
 
         case 'get_enfants_et_statut_paiement':
@@ -170,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($resultat['enfants'] as &$enfant) {
                         // Initialiser le tableau des types de paiement pour cet enfant
                         $enfant['typesPaiement'] = [];
+
 
                         // Récupérer les types de paiement correspondant à la classe de l'enfant
                         $stmt = $auth->conn->prepare("
@@ -411,13 +431,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Date Paiement</th>
-                                
+
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Numéro de transaction
                                 </th>
 
-                               
+
                             </tr>
                         </thead>
                         <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
