@@ -170,8 +170,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
 
-
-
         case 'get_enfants_et_statut_paiement':
             if ($loggedInParentId) {
                 $resultat = $auth->obtenirEnfantsEtStatutPaiementParIdParent($loggedInParentId);
