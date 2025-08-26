@@ -942,37 +942,35 @@ class AuthController
         return $this->paymentModel->delete($paymentId);
     }
 
-    public function getPaiementsByParentName($parentName)
+    public function getPaiementsByParentName($parentId)
     {
-        error_log("Début de getPaiementsByParentName dans AuthController pour parent: " . $parentName);
+        error_log("Début de getPaiementsByParentName dans AuthController pour parent_id: " . $parentId);
 
-        // Assurez-vous que $this->conn est bien un objet mysqli valide
         if (!$this->conn) {
             error_log("Erreur: La connexion à la base de données n'est pas établie dans getPaiementsByParentName (AuthController).");
             return false;
         }
 
         $query = "SELECT
-            p.id AS id_paiement,  -- Utilisez l'ID de la table paiements et renommez-le
-            i.matricule,
-            p.montant_payer,
-            p.motif_paiement,
-            p.date_paiement,
-            i.nom_eleve AS nom_eleve,
-            i.postnom_eleve AS postnom_eleve,
-            i.prenom_eleve AS prenom_eleve,
-            i.sexe_eleve AS sexe_eleve,
-            i.classe_selection AS classe_eleve,
-            i.adresse_eleve AS adresse_eleve,
-            p.total_annuel AS total_annuel
-        FROM
-            " . $this->table_name . " p
-        JOIN
-            " . $this->students_table . " i ON p.matricule = i.matricule
-        JOIN
-            " . $this->parents_table . " u ON i.parent_id = u.id 
-        WHERE
-            u.Email = ?";
+        p.id AS id_paiement,
+        i.matricule,
+        p.montant_payer,
+        p.motif_paiement,
+        p.date_paiement,
+        i.nom_eleve AS nom_eleve,
+        i.postnom_eleve AS postnom_eleve,
+        i.prenom_eleve AS prenom_eleve,
+        i.sexe_eleve AS sexe_eleve,
+        i.classe_selection AS classe_eleve,
+        i.adresse_eleve AS adresse_eleve,
+        p.total_annuel AS total_annuel,
+        p.transaction_id AS numero_transaction
+    FROM
+        " . $this->table_name . " p
+    JOIN
+        " . $this->students_table . " i ON p.matricule = i.matricule
+    WHERE
+        i.parent_id = ?";
 
         $stmt = $this->conn->prepare($query);
 
@@ -981,7 +979,8 @@ class AuthController
             return false;
         }
 
-        $stmt->bind_param("s", $parentName);
+        // parent_id est un entier
+        $stmt->bind_param("i", $parentId);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -994,6 +993,7 @@ class AuthController
         error_log("Requête SQL réussie. Nombre de paiements trouvés: " . count($paiements));
         return $paiements;
     }
+
 
     // La fonction qui utilise maintenant la version interne de getPaiementsByParentName
     public function obtenirPaiementsParNomParent($parentName)
@@ -1239,26 +1239,24 @@ class AuthController
     public function obtenirEnfantsParIdParent($idParent)
     {
         // Récupérer uniquement les informations des élèves
-        $stmt = $this->conn->prepare("
-        SELECT id, matricule, nom_eleve, postnom_eleve, prenom_eleve,
-               sexe_eleve, nom_parent, classe_selection, adresse_eleve, annee_inscription
-        FROM inscriptions
-        WHERE parent_id = ?
-    ");
+        $stmt = $this->conn->prepare(" SELECT id, matricule, nom_eleve, postnom_eleve, prenom_eleve,
+     sexe_eleve, nom_parent, classe_selection, adresse_eleve, annee_inscription 
+     FROM inscriptions 
+     WHERE parent_id = ? ");
         $stmt->bind_param("i", $idParent);
         $stmt->execute();
         $result = $stmt->get_result();
-
         $enfants = [];
         while ($row = $result->fetch_assoc()) {
             // Initialiser le total annuel à 0, sera calculé selon le type de paiement sélectionné
             $row['total_annuel'] = number_format(0, 2, ',', '.');
-            $row['mois_affichage'] = ''; // Champ à remplir lors de la sélection d’un type de paiement
+            $row['mois_affichage'] = '';
+            // Champ à remplir lors de la sélection d’un type de paiement
             $enfants[] = $row;
         }
-
         return ['success' => true, 'enfants' => $enfants];
     }
+
 
 
 

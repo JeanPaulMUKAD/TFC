@@ -35,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'gener
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 
-    // Assurez-vous que le chemin vers fpdf.php est correct
+    // Assurez-vous que le chemin vers 
+    // php est correct
     require_once __DIR__ . '/../../fpdf.php';
 
     $data = $_POST;
@@ -107,13 +108,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'get_paiements_by_parent':
-            $parentNameFromAjax = $requestData['Names_User'] ?? '';
-            if ($parentNameFromAjax && $parentNameFromAjax === $loggedInParentName) {
-                $resultat = $auth->obtenirPaiementsParNomParent($parentNameFromAjax);
+            if ($loggedInParentId) { // Assure-toi que l'ID du parent est en session
+                $stmt = $auth->conn->prepare("
+            SELECT 
+                p.id AS id_paiement,
+                i.matricule,
+                p.montant_payer,
+                p.motif_paiement,
+                p.date_paiement,
+                i.nom_eleve,
+                i.postnom_eleve,
+                i.prenom_eleve,
+                i.sexe_eleve,
+                i.classe_selection AS classe_eleve,
+                i.adresse_eleve,
+                p.total_annuel,
+                p.transaction_id AS numero_transaction
+            FROM paiement p
+            JOIN inscriptions i ON p.matricule = i.matricule
+            WHERE i.parent_id = ?
+        ");
+
+                if ($stmt) {
+                    $stmt->bind_param("i", $loggedInParentId);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+
+                    if ($result) {
+                        $paiements = $result->fetch_all(MYSQLI_ASSOC);
+                        if (!empty($paiements)) {
+                            $resultat = ['success' => true, 'paiements' => $paiements];
+                        } else {
+                            $resultat = ['success' => false, 'message' => 'Aucun historique de paiement trouvé pour les enfants de ce parent.'];
+                        }
+                    } else {
+                        $resultat = ['success' => false, 'message' => 'Erreur lors de l\'exécution de la requête.'];
+                    }
+                } else {
+                    $resultat = ['success' => false, 'message' => 'Erreur de préparation de la requête SQL.'];
+                }
             } else {
-                $resultat['message'] = 'Parent non autorisé ou non identifié.';
+                $resultat = ['success' => false, 'message' => 'ID du parent non disponible en session.'];
             }
             break;
+
 
         case 'get_enfants_et_statut_paiement':
             if ($loggedInParentId) {
@@ -148,19 +186,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $est_annuel = (strtolower($row['mois']) === 'annuel');
                             $total_annuel_calcule = $est_annuel ? $montant_type : $montant_type * 10;
 
-                            // Récupérer le montant déjà payé pour ce type de paiement et cet enfant
-                            // Jointure entre les tables `paiement` et `payementtype`
+                            // Récupérer le montant déjà payé pour ce type de paiement et cet enfant via matricule
                             $stmt_paiement = $auth->conn->prepare("
-                        SELECT SUM(p.montant_payer) as montant_paye 
-                        FROM paiement p
-                        JOIN payementtype pt ON p.id = pt.id
-                        WHERE p.id = ? AND pt.id = ?
+                        SELECT SUM(montant_payer) as montant_paye
+                        FROM paiement
+                        WHERE matricule = ? AND motif_paiement = ?
                     ");
-                            $stmt_paiement->bind_param("ii", $enfant['id_eleve'], $row['id']);
+                            $stmt_paiement->bind_param("ss", $enfant['matricule'], $row['nom_type']); // matricule = string, nom_type = string
                             $stmt_paiement->execute();
                             $res_paiement = $stmt_paiement->get_result();
                             $row_paiement = $res_paiement->fetch_assoc();
-                            $montant_paye = (float) $row_paiement['montant_paye'];
+                            $montant_paye = $row_paiement['montant_paye'] ? (float) $row_paiement['montant_paye'] : 0;
 
                             $enfant['typesPaiement'][] = [
                                 'nom_type' => $row['nom_type'],
@@ -170,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'montant_paye' => $montant_paye
                             ];
                         }
+
                         $enfant['aucunPaiement'] = empty($enfant['typesPaiement']);
                     }
                     $resultat['success'] = true;
@@ -367,16 +404,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     Montant Payé</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total annuel</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Motif</th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Date Paiement</th>
+                                
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Statut</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Action</th>
+                                    Numéro de transaction
+                                </th>
+
+                               
                             </tr>
                         </thead>
                         <tbody id="paiementsTableBody" class="bg-white divide-y divide-gray-200">
@@ -390,91 +431,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div id="childrenTableContainer" style="display: none;">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Mes Enfants</h2>
-    <div class="table-responsive">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nom complet
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Sexe
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Classe
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Année d'Inscription
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type de paiement
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total annuel
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Payé
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Dette
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Avance
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Action de paiement
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="childrenTableBody" class="bg-white divide-y divide-gray-200">
-                <tr>
-                    <td colspan="10" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        Chargement de la liste des enfants...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Mes Enfants</h2>
+                <div class="table-responsive">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nom complet
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sexe
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Classe
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Année d'Inscription
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Type de paiement
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total annuel
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Payé
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Dette
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Avance
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action de paiement
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="childrenTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="10" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    Chargement de la liste des enfants...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
 
         </div>
     </div>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const tableBody = document.getElementById("childrenTableBody");
-        const tableContainer = document.getElementById("childrenTableContainer");
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const tableBody = document.getElementById("childrenTableBody");
+            const tableContainer = document.getElementById("childrenTableContainer");
 
-        fetch('Acceuil_Parent.php', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ action: 'get_enfants_by_parent' })
-        })
-        .then(response => response.json())
-        .then(data => {
-            tableBody.innerHTML = ''; // Vider le message de chargement
+            fetch('Acceuil_Parent.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ action: 'get_enfants_by_parent' })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = ''; // Vider le message de chargement
 
-            if (data.success && data.enfants.length > 0) {
-                data.enfants.forEach(enfant => {
-                    let selectOptions = '';
-                    if (!enfant.aucunPaiement) {
-                        enfant.typesPaiement.forEach(tp => {
-                            selectOptions += `
+                    if (data.success && data.enfants.length > 0) {
+                        data.enfants.forEach(enfant => {
+                            let selectOptions = '';
+                            if (!enfant.aucunPaiement) {
+                                enfant.typesPaiement.forEach(tp => {
+                                    selectOptions += `
                                 <option 
                                     value="${tp.nom_type}" 
                                     data-total-annuel-calcule="${tp.total_annuel_calcule}"
                                     data-montant-paye="${tp.montant_paye}">
                                     ${tp.nom_type}
-                                </option>`;
-                        });
-                    } else {
-                        selectOptions = `<option disabled selected>Aucun paiement configuré</option>`;
-                    }
+                                </option>
 
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+                                    `;
+                                });
+                            } else {
+                                selectOptions = `<option disabled selected>Aucun paiement configuré</option>`;
+                            }
+
+
+
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.nom_eleve} ${enfant.postnom_eleve} ${enfant.prenom_eleve}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.sexe_eleve}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${enfant.classe_selection}</td>
@@ -500,91 +555,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 avance">0,00 FC</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 payment-action"></td>
                     `;
-                    tableBody.appendChild(tr);
-                });
+                            tableBody.appendChild(tr);
+                        });
 
-                // Ajouter l'événement 'change' pour chaque select
-                document.querySelectorAll('.paymentTypeSelect').forEach(select => {
-                    select.addEventListener('change', function () {
-                        const selectedOption = this.selectedOptions[0];
-                        const totalAnnuel = parseFloat(selectedOption.dataset.totalAnnuelCalcule) || 0;
-                        const montantPaye = parseFloat(selectedOption.dataset.montantPaye) || 0;
-                        
-                        const dette = Math.max(0, totalAnnuel - montantPaye);
-                        const avance = Math.max(0, montantPaye - totalAnnuel);
+                        // Ajouter l'événement 'change' pour chaque select
+                        document.querySelectorAll('.paymentTypeSelect').forEach(select => {
+                            select.addEventListener('change', function () {
+                                const selectedOption = this.selectedOptions[0];
 
-                        const tr = this.closest('tr');
-                        const detteTd = tr.querySelector('.dette');
-                        const paymentActionTd = tr.querySelector('.payment-action');
+                                // Récupérer total annuel et montant déjà payé depuis data-*
+                                const totalAnnuel = parseFloat(selectedOption.dataset.totalAnnuelCalcule) || 0;
+                                const montantPaye = parseFloat(selectedOption.dataset.montantPaye) || 0;
 
-                        tr.querySelector('.total_annuel').textContent = totalAnnuel.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
-                        tr.querySelector('.montant_paye').textContent = montantPaye.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
-                        detteTd.textContent = dette.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
-                        tr.querySelector('.avance').textContent = avance.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
-                        
-                        // Ajout de la condition pour la couleur rouge et le bouton de paiement
-                        if (dette > 0) {
-                            detteTd.classList.add('dette-rouge');
-                            // Créer et afficher le bouton de paiement
-                            paymentActionTd.innerHTML = `<button class="payer-solde-btn">Payer solde</button>`;
-                            
-                            // Ajouter l'événement de clic au bouton
-                            paymentActionTd.querySelector('.payer-solde-btn').addEventListener('click', function() {
-                                const parentSelect = this.closest('tr').querySelector('.paymentTypeSelect');
-                                const nomType = selectedOption.value;
-                                
-                                // Récupérer les données de l'enfant à partir des attributs data-*
-                                const matricule = parentSelect.dataset.matricule;
-                                const nomEleve = parentSelect.dataset.nomEleve;
-                                const postnomEleve = parentSelect.dataset.postnomEleve;
-                                const prenomEleve = parentSelect.dataset.prenomEleve;
-                                const sexeEleve = parentSelect.dataset.sexeEleve;
-                                const classeEleve = parentSelect.dataset.classeEleve;
-                                const nomParent = parentSelect.dataset.nomParent;
-                                const adresseEleve = parentSelect.dataset.adresseEleve;
+                                const dette = Math.max(0, totalAnnuel - montantPaye);
+                                const avance = Math.max(0, montantPaye - totalAnnuel);
 
-                                const params = new URLSearchParams({
-                                    matricule: matricule,
-                                    nom_eleve: nomEleve,
-                                    postnom_eleve: postnomEleve,
-                                    prenom_eleve: prenomEleve,
-                                    sexe_eleve: sexeEleve,
-                                    classe_eleve: classeEleve,
-                                    nom_parent: nomParent,
-                                    adresse_eleve: adresseEleve,
-                                    montant_du: dette,
-                                    total_annuel: totalAnnuel,
-                                    motif_paiement: nomType
-                                });
-                                
-                                window.location.href = `PaiementParent.php?${params.toString()}`;
+
+                                const tr = this.closest('tr');
+                                tr.querySelector('.total_annuel').textContent = totalAnnuel.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
+                                tr.querySelector('.montant_paye').textContent = montantPaye.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
+
+                                tr.querySelector('.dette').textContent = dette.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
+                                tr.querySelector('.avance').textContent = avance.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " FC";
+
+
+                                const paymentActionTd = tr.querySelector('.payment-action');
+
+                                if (dette > 0) {
+                                    tr.querySelector('.dette').classList.add('dette-rouge');
+                                    paymentActionTd.innerHTML = `<button class="payer-solde-btn">Payer solde</button>`;
+                                    paymentActionTd.querySelector('.payer-solde-btn').addEventListener('click', function () {
+                                        const parentSelect = this.closest('tr').querySelector('.paymentTypeSelect');
+                                        const selectedOption = parentSelect.selectedOptions[0];
+
+                                        const params = new URLSearchParams({
+                                            matricule: parentSelect.dataset.matricule,
+                                            nom_eleve: parentSelect.dataset.nomEleve,
+                                            postnom_eleve: parentSelect.dataset.postnomEleve,
+                                            prenom_eleve: parentSelect.dataset.prenomEleve,
+                                            sexe_eleve: parentSelect.dataset.sexeEleve,
+                                            classe_eleve: parentSelect.dataset.classeEleve,
+                                            nom_parent: parentSelect.dataset.nomParent,
+                                            adresse_eleve: parentSelect.dataset.adresseEleve,
+                                            montant_du: dette,
+                                            total_annuel: totalAnnuel,
+                                            motif_paiement: selectedOption.value
+                                        });
+
+                                        window.location.href = `PaiementParent.php?${params.toString()}`;
+                                    });
+                                } else {
+                                    tr.querySelector('.dette').classList.remove('dette-rouge');
+                                    paymentActionTd.innerHTML = '';
+                                }
                             });
-                        } else {
-                            detteTd.classList.remove('dette-rouge');
-                            // Retirer le bouton si la dette est nulle
-                            paymentActionTd.innerHTML = '';
-                        }
-                    });
+                        });
+
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="10" class="px-6 py-4 text-center text-gray-500">${data.message || 'Aucun enfant trouvé.'}</td></tr>`;
+                    }
+                    tableContainer.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erreur AJAX:', error);
+                    tableBody.innerHTML = `<tr><td colspan="10" class="px-6 py-4 text-center text-red-500">Erreur lors du chargement des enfants.</td></tr>`;
+                    tableContainer.style.display = 'block';
                 });
-
-            } else {
-                tableBody.innerHTML = `<tr><td colspan="10" class="px-6 py-4 text-center text-gray-500">${data.message || 'Aucun enfant trouvé.'}</td></tr>`;
-            }
-            tableContainer.style.display = 'block';
-        })
-        .catch(error => {
-            console.error('Erreur AJAX:', error);
-            tableBody.innerHTML = `<tr><td colspan="10" class="px-6 py-4 text-center text-red-500">Erreur lors du chargement des enfants.</td></tr>`;
-            tableContainer.style.display = 'block';
         });
-    });
-</script>
-
-
-
-
-
-
+    </script>
 
 
 
@@ -650,28 +688,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const factureButton = montantPayeNumeric > 0 ? `<button class="download-facture-btn ml-2 px-3 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700" data-paiement-id="${paiement.id_paiement}" data-paiement-data='${JSON.stringify(paiement)}'><i class="fas fa-file-invoice"></i> Télécharger</button>` : '';
 
                 return `
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(paiement.matricule)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(paiement.nom_eleve)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.postnom_eleve)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.prenom_eleve)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.sexe_eleve || 'N/A')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.classe_eleve)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.adresse_eleve)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.montant_payer)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.motif_paiement)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.date_paiement)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                        ${statusText}
-                    </span>
-                    ${paymentButton}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    ${factureButton}
-                </td>
-            </tr>
-            `;
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm  text-gray-900">${escapeHtml(paiement.matricule)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(paiement.nom_eleve)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.postnom_eleve)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.prenom_eleve)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.sexe_eleve || 'N/A')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.classe_eleve)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.adresse_eleve)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.montant_payer)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.total_annuel)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.motif_paiement)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.date_paiement)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(paiement.numero_transaction || '')}</td>
+                   
+                   
+                </tr>
+                `;
+
             };
 
             // Fonction principale pour récupérer et afficher les paiements
@@ -797,10 +831,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fetchAndRenderPaiements(loggedInParentName);
         });
     </script>
-
-
-
-
 
 
     <!-- SEARCH LOGO -->

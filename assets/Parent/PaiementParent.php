@@ -12,12 +12,10 @@ $sexe_eleve_prefill = htmlspecialchars($_GET['sexe_eleve'] ?? '');
 $classe_eleve_prefill = htmlspecialchars($_GET['classe_eleve'] ?? '');
 $nom_parent_prefill = htmlspecialchars($_GET['nom_parent'] ?? '');
 $adresse_eleve_prefill = htmlspecialchars($_GET['adresse_eleve'] ?? '');
-$montant_du_prefill = htmlspecialchars($_GET['montant_du'] ?? ''); // Montant restant à payer
+$montant_du_prefill = htmlspecialchars($_GET['montant_du'] ?? '');
 $motif_paiement_prefill = htmlspecialchars($_GET['motif_paiement'] ?? '');
 
-
-
-// Récupérer dynamiquement les types de paiement via AuthController
+// Récupérer dynamiquement les types de paiement
 $typesPaiement = [];
 try {
     $sql = "SELECT id, nom_type FROM payementtype";
@@ -31,23 +29,147 @@ try {
     $typesPaiement = [];
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule_info_ajax'])) { // Renommez le paramètre pour éviter la confusion
+$montant_classe_prefill = 0;
+
+if (!empty($motif_paiement_prefill)) {
+    $stmtType = $auth->conn->prepare("
+        SELECT montant_classe 
+        FROM payementtype 
+        WHERE nom_type = ?
+        LIMIT 1
+    ");
+    $stmtType->bind_param("s", $motif_paiement_prefill);
+    $stmtType->execute();
+    $stmtType->store_result();
+    $stmtType->bind_result($montant_classe);
+
+    if ($stmtType->num_rows > 0 && $stmtType->fetch()) {
+        $montant_classe_prefill = $montant_classe;
+    }
+
+    $stmtType->close();
+}
+
+
+
+
+
+// ✅ AJAX GET pour récupérer infos élève par matricule
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['matricule_info_ajax'])) {
     header('Content-Type: application/json');
     echo json_encode($auth->getStudentInfoByMatricule($_GET['matricule_info_ajax']));
     exit;
 }
 
+// ✅ Gestion du paiement
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Si c'est une requête AJAX pour le rapport
+
+    // Cas AJAX rapport
     if (isset($_POST['action']) && $_POST['action'] === 'fetch_report') {
         header('Content-Type: application/json');
         echo json_encode($auth->handlePaymentAndReport($_POST));
         exit;
+    }
+
+    // Cas paiement validé (après retour CinetPay ou paiement manuel)
+    if (isset($_POST['payment_validated']) && $_POST['payment_validated'] == "1") {
+        $matricule = $_POST['matricule'] ?? '';
+        $nom_eleve = $_POST['nom_eleve'] ?? '';
+        $postnom_eleve = $_POST['postnom_eleve'] ?? '';
+        $prenom_eleve = $_POST['prenom_eleve'] ?? '';
+        $sexe_eleve = $_POST['sexe_eleve'] ?? '';
+        $classe_eleve = $_POST['classe_eleve'] ?? '';
+        $nom_parent = $_POST['nom_parent'] ?? '';
+        $adresse_eleve = $_POST['adresse_eleve'] ?? '';
+        $montant_payer = $_POST['montant_payer'] ?? 0;
+        $motif_paiement = $_POST['motif_paiement'] ?? '';
+        $devise = $_POST['devise'] ?? 'CDF';
+        $transaction_id = $_POST['transaction_id'] ?? uniqid("TX_");
+        $total_annuel = $_POST['total_annuel'] ?? 0;  // ✅ Ajouté
+
+        // ✅ Valeurs automatiques
+        $mode_paiement = $_POST['mode_paiement'] ?? 'en ligne';
+        $devise1 = $_POST['devise1'] ?? 'FC';
+
+
+        $stmt = $auth->conn->prepare("
+            INSERT INTO paiement (
+                matricule, nom_eleve, postnom_eleve, prenom_eleve, 
+                sexe_eleve, classe_eleve, nom_parent, adresse_eleve,
+                montant_payer, motif_paiement, devise, 
+                transaction_id, total_annuel, date_paiement
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        // ✅ Ajustement bind_param
+        $stmt->bind_param(
+            "ssssssssdsssd",
+            $matricule,
+            $nom_eleve,
+            $postnom_eleve,
+            $prenom_eleve,
+            $sexe_eleve,
+            $classe_eleve,
+            $nom_parent,
+            $adresse_eleve,
+            $montant_payer,   // d
+            $motif_paiement,
+            $devise,
+            $transaction_id,
+            $total_annuel     // d
+        );
+
+        if ($stmt->execute()) {
+            $message = "<div class='alert alert-success'>✅ Paiement enregistré avec succès.</div>";
+            // ===== Génération automatique du reçu PDF =====
+            require_once __DIR__ . '/../../fpdf.php';
+
+            $pdf = new FPDF();
+            $pdf->AddPage();
+            $pdf->SetFont('Arial', 'B', 16);
+            $pdf->Cell(0, 10, 'Reçu de paiement - C.S.P.P.UNILU', 0, 1, 'C');
+            $pdf->Ln(5);
+
+            $pdf->SetFont('Arial', '', 12);
+            $pdf->Cell(50, 10, 'Matricule : ', 0, 0);
+            $pdf->Cell(0, 10, $matricule, 0, 1);
+
+            $pdf->Cell(50, 10, 'Nom complet : ', 0, 0);
+            $pdf->Cell(0, 10, $nom_eleve . ' ' . $postnom_eleve . ' ' . $prenom_eleve, 0, 1);
+
+            $pdf->Cell(50, 10, 'Classe : ', 0, 0);
+            $pdf->Cell(0, 10, $classe_eleve, 0, 1);
+
+            $pdf->Cell(50, 10, 'Montant payé : ', 0, 0);
+            $pdf->Cell(0, 10, number_format($montant_payer, 2) . ' ' . $devise1, 0, 1);
+
+            $pdf->Cell(50, 10, 'Mode de paiement : ', 0, 0);
+            $pdf->Cell(0, 10, $mode_paiement, 0, 1);
+
+            $pdf->Cell(50, 10, 'Motif du paiement : ', 0, 0);
+            $pdf->Cell(0, 10, $motif_paiement, 0, 1);
+
+            $pdf->Cell(50, 10, 'Transaction ID : ', 0, 0);
+            $pdf->Cell(0, 10, $transaction_id, 0, 1);
+
+            $pdf->Cell(50, 10, 'Date : ', 0, 0);
+            $pdf->Cell(0, 10, date('d-m-Y H:i:s'), 0, 1);
+
+            // ===== Envoi au navigateur pour téléchargement =====
+            $pdf->Output('D', 'Recu_Paiement_' . $matricule . '.pdf');
+            exit;
+        } else {
+            $message = "<div class='alert alert-danger'>❌ Erreur lors de l'enregistrement du paiement : " . $stmt->error . "</div>";
+        }
+
+        $stmt->close();
+
     } else {
-        $response = $auth->handlePaymentAndReport($_POST);
-        $message = $response['message'];
+        $message = "<div class='alert alert-warning'>⚠️ Paiement non validé.</div>";
     }
 }
+
+
 ?>
 
 
@@ -131,12 +253,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 } else if (data.status === "ACCEPTED") {
                     alert("Votre paiement a été effectué avec succès");
 
+                    // Marque le paiement comme validé
                     document.getElementById('payment_validated').value = "1";
-                    document.getElementById('transaction_id').value = data.transaction_id;
 
+                    // Récupère correctement l'ID de transaction renvoyé par CinetPay
+                    document.getElementById('transaction_id').value = transactionId;
+
+                    document.getElementById('devise1').value = devise;
+                    document.getElementById('mode_paiement').value = 'en ligne';
+
+                    // Soumet le formulaire
                     document.querySelector("form").submit();
                 }
             });
+
         }
     </script>
 
@@ -263,11 +393,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                     <label for="sexe_eleve" class="form-label">Sexe <span
                                                             class="text-danger">*</span></label>
                                                     <select class="form-select" id="sexe_eleve" name="sexe_eleve"
-                                                        required disabled>
+                                                        required>
                                                         <option value="">Sélectionner le sexe</option>
-                                                        <option value="M" <?php echo ($sexe_eleve_prefill === 'M') ? 'selected' : ''; ?>>Masculin</option>
-                                                        <option value="F" <?php echo ($sexe_eleve_prefill === 'F') ? 'selected' : ''; ?>>Féminin</option>
+                                                        <option value="Masculin" <?php echo ($sexe_eleve_prefill === 'Masculin') ? 'selected' : ''; ?>>
+                                                            Masculin</option>
+                                                        <option value="Féminin" <?php echo ($sexe_eleve_prefill === 'Féminin') ? 'selected' : ''; ?>>
+                                                            Féminin</option>
                                                     </select>
+
                                                     <div class="invalid-feedback">
                                                         Veuillez sélectionner le sexe de l'élève.
                                                     </div>
@@ -285,7 +418,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label for="nom_parent" class="form-label">Email du Parent <span
+                                                    <label for="nom_parent" class="form-label">Nom du Parent <span
                                                             class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="nom_parent"
                                                         name="nom_parent" placeholder="Nom du parent" required
@@ -317,6 +450,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         Veuillez entrer le montant à payer.
                                                     </div>
                                                 </div>
+                                                <div class="mb-3">
+                                                    <label for="total_annuel" class="form-label">Montant annuel de la
+                                                        classe</label>
+                                                    <input type="number" class="form-control" id="total_annuel"
+                                                        name="total_annuel">
+                                                </div>
+                                                <input type="hidden" name="mode_paiement" id="mode_paiement"
+                                                    value="en ligne">
+                                                <input type="hidden" name="devise1" id="devise1" value="FC">
+
+
+
+
+
 
                                                 <div class="mb-3">
                                                     <label for="devise" class="form-label">Devise <span
@@ -340,8 +487,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                         Veuillez entrer le motif du paiement.
                                                     </div>
                                                 </div>
-                                                <input type="hidden" name="total_annuel" id="total_annuel"
-                                                    value="<?php echo htmlspecialchars($_GET['total_annuel'] ?? ''); ?>">
+
 
 
                                                 <div class="mt-4">
@@ -401,6 +547,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 document.getElementById('total_annuel').value = urlParams.get('total_annuel') || '';
                 document.getElementById('motif_paiement').value = urlParams.get('motif_paiement') || '';
+
+                // ✅ Pré-remplissage correct du Montant annuel de la classe
+                document.getElementById('montant_classe').value = urlParams.get('total_annuel') || '';
 
                 // Désactiver la recherche par matricule si les infos sont déjà là
                 document.getElementById('matricule').removeEventListener('blur', chercherEleveParMatricule);
