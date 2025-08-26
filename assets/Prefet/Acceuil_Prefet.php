@@ -338,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       function createTable(data, type) {
         if (type === 'paiements') {
           // Tableau pour les paiements
-          const headers = ['Matricule', 'Nom', 'Post-Nom', 'Prénom', 'Sexe', 'Date', 'Montant', 'Motif', 'Mode', 'Classe'];
+          const headers = ['Matricule', 'Nom', 'Post-Nom', 'Prénom', 'Sexe', 'Date', 'Montant', 'Motif', 'Classe'];
           const rows = data.map(p => `
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.matricule}</td>
@@ -349,7 +349,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.date_paiement}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.montant_payer}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.motif_paiement}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.mode_paiement}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.classe_eleve}</td>
                             
                         </tr>
@@ -375,7 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           // Vérifie si les données contiennent la colonne 'arrieres' pour adapter l'affichage.
           const isArrears = data.some(item => item.arrieres !== undefined);
           const headers = isArrears
-            ? ['Matricule', 'Nom', 'Postnom', 'Prénom', 'Classe', 'Montant annuel', 'Total payé', 'Reste à payer', 'Mode']
+            ? ['Matricule', 'Nom', 'Postnom', 'Prénom', 'Classe', 'Montant annuel', 'Total payé', 'Reste à payer', ]
             : ['Matricule', 'Nom', 'Postnom', 'Prénom', 'Sexe', 'Classe', 'Nom parent', 'Adresse'];
 
           const rows = data.map(e => {
@@ -390,7 +389,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${e.total_annuel}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${e.total_paye}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-bold">${e.arrieres}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${e.dernier_mode_paiement}</td>
                     </tr>
                 `;
             } else {
