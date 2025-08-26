@@ -267,7 +267,7 @@
                                                         <select class="form-control" id="devise1" name="devise1"
                                                             required>
                                                             <option value="">Sélectionnez une devise</option>
-                                                            <option value="USD">$ - USD</option>
+                                                         
                                                             <option value="CDF">Fc - CDF</option>
                                                         </select>
                                                         <div class="invalid-feedback">
@@ -303,7 +303,6 @@
                                                                 class="text-danger">*</span></label>
                                                         <select class="form-control" id="devise" name="devise" required>
                                                             <option value="">Sélectionnez une devise</option>
-                                                            <option value="$">USD</option>
                                                             <option value="Fc">CDF</option>
                                                         </select>
                                                         <div class="invalid-feedback">

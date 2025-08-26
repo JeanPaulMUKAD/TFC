@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                       <?php echo htmlspecialchars($row['motif_paiement']); ?>
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                      <?php echo htmlspecialchars($row['mode_paiement']); ?>
+                      <?php echo htmlspecialchars($row['motif_paiement']); ?>
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
                       <?php echo htmlspecialchars($row['date_paiement']); ?>
@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
                     </td>
                     <td class="px-4 py-2 whitespace-nowrap text-sm font-medium">
                       <button
-                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['postnom_eleve']); ?>', '<?php echo addslashes($row['prenom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($row['devise']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['mode_paiement']); ?>','<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
+                        onclick="imprimerRecu('<?php echo addslashes($row['nom_eleve']); ?>', '<?php echo addslashes($row['postnom_eleve']); ?>', '<?php echo addslashes($row['prenom_eleve']); ?>', '<?php echo addslashes($row['classe_eleve']); ?>', '<?php echo addslashes($row['montant_payer']); ?>', '<?php echo addslashes($row['devise']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>', '<?php echo addslashes($row['motif_paiement']); ?>','<?php echo addslashes($row['date_paiement']); ?>', '<?php echo number_format($reste, 2); ?>', '<?php echo addslashes($devise_reste); ?>')"
                         class="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 mb-1 lg:mb-0 lg:mr-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
                           stroke="currentColor">
